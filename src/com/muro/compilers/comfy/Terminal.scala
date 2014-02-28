@@ -7,11 +7,13 @@
 package com.muro.compilers.comfy
 
 object Terminal {
-  val LeftBrace = "{"
-  val RightBrace = "}"
-  val LeftParen = "("
-  val RightParen = ")"
+  val OpenBrace = "\\{"
+  val CloseBrace = "\\}"
+  val OpenParen = "\\("
+  val CloseParen = "\\)"
   val DoubleQuote = "\""
+  val Exclamation = "!"
+  val Equals = "="
   val EndOfProgram = "$"
   val If = "if"
   val Print = "print"
@@ -20,9 +22,13 @@ object Terminal {
   val String = "string"
   val Boolean = "boolean"
   val EqualsOp = "=="
-  val NotEqualsOp = "!="
-  val BoolFalse = "false"
-  val BoolTrue = "true"
-  val PlusOp = "+"
+  val NotEqualsOp = "!="  
+  val BoolLiteral= "(false)|(true)"
+  val Plus = "\\+"
   val Space = " "
+  val Newline = "\n"
+  val Char = "[a-z]"
+  val Id = Char
+  val Operator = "(==)|(!=)|\\+"
+  val Digit = "[0-9]{1}"
 }

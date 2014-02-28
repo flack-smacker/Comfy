@@ -18,7 +18,9 @@ object Tag extends Enumeration {
    * The following syntax is shorthand for adding each name as a value to 
    * the Tag enumeration.
    */
-  val _if, _while, _print, _boolOp, _plusOp, _lParen, _rParen, _lBrace, _rBrace,
-  _dblQuote, _int, _boolean, _string, _numLiteral, _boolLiteral, _stringLiteral 
+  val T_if, T_while, T_print, T_boolOp, T_plusOp, T_assignOp, 
+      T_openParen, T_closeParen, T_openBrace, T_closeBrace, 
+      T_dblQuote, T_int, T_boolean, T_string, 
+      T_id, T_numLiteral, T_boolLiteral, T_stringLiteral 
   = Value
 }
