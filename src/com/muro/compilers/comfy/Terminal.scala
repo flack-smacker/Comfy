@@ -7,28 +7,28 @@
 package com.muro.compilers.comfy
 
 object Terminal {
-  val OpenBrace = "\\{"
-  val CloseBrace = "\\}"
-  val OpenParen = "\\("
-  val CloseParen = "\\)"
-  val DoubleQuote = "\""
-  val Exclamation = "!"
-  val Equals = "="
-  val EndOfProgram = "$"
-  val If = "if"
-  val Print = "print"
-  val While = "while"
-  val Int = "int"
-  val String = "string"
-  val Boolean = "boolean"
-  val EqualsOp = "=="
-  val NotEqualsOp = "!="  
-  val BoolLiteral= "(false)|(true)"
-  val Plus = "\\+"
-  val Space = " "
-  val Newline = "\n"
-  val Char = "[a-z]"
+  val OpenBrace = "\\{".r
+  val CloseBrace = "\\}".r
+  val OpenParen = "\\(".r
+  val CloseParen = "\\)".r
+  val DoubleQuote = "\"".r
+  val Exclamation = "!".r
+  val Equals = "=".r
+  val EndOfProgram = "\\$".r
+  val If = "if".r
+  val Print = "print".r
+  val While = "while".r
+  val Int = "int".r
+  val String = "string".r
+  val Boolean = "boolean".r
+  val EqualsOp = "==".r
+  val NotEqualsOp = "!=".r  
+  val BoolLiteral= "(false)|(true)".r
+  val Plus = "\\+".r
+  val Space = " ".r
+  val Newline = "\n".r
+  val Char = "[a-z]".r
   val Id = Char
-  val Operator = "(==)|(!=)|\\+"
-  val Digit = "[0-9]{1}"
+  val Operator = "(==)|(!=)|\\+".r
+  val Digit = "[0-9]{1}".r
 }

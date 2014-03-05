@@ -8,7 +8,7 @@ import java.io._
  * Lex is responsible for reading in a file containing a source program,
  * scanning the source and identifying lexemes that match specific token
  * patterns, constructing tokens from said lexems, and outputting a stream of
- * tokens to be processed during the parse phase.
+ * tokens to be parsed.
  */
 object Lex {
 
@@ -26,14 +26,15 @@ object Lex {
 
     /**
      * An iterator for traversing the source code character-by-character.
-     * A BufferedIterator provides the head method which allows look-ahead.
+     * A BufferedIterator provides the head method which allows one-character
+     * look-ahead.
      */
-    var s: BufferedIterator[Char] = null
+    var tokenStream: BufferedIterator[Char] = null
 
     /**
      * Character buffer to store input awaiting lexical analysis.
      */
-    val buffer: StringBuilder = new StringBuilder();
+    val buffer: StringBuilder = new StringBuilder()
 
     /**
      * A flag to indicate an unrecoverable syntax error.
@@ -68,102 +69,120 @@ object Lex {
       doWarn("Missing end-of-program marker. Inserting end-of-program marker.");
     }
 
-    s = source.iterator.buffered
+    // An iterator will allow the source to be parsed character-by-character. 
+    tokenStream = source.iterator.buffered
 
+    // Loop until there are no more characters.
+    while (tokenStream.hasNext && !fail) {
+      consume(tokenStream.next)
+      nColumns += 1
+    }
+    
+    /**
+     * Consumes a single character of the source input program. If c is an 
+     * alphanumeric character it is buffered, otherwise the character is
+     * identified as a valid lexeme. Alphanumeric characters are the only
+     * terminals that can occur more than once in a row, except for Strings, 
+     * which are handled differently.
+     */
     def consume(c: Char): Unit = {
-
-      c.toString match {
-        case Terminal.Digit.r() => {
-          buffer.append(c)
+      if (c.isLetterOrDigit) {
+        buffer.append(c)
+      } else {
+        // We've hit a non-alphanumeric character.
+        if (!buffer.isEmpty) {
+          // Check the buffer for a valid lexeme.
+          identifyLexeme(buffer.toString)
+          buffer.clear()
         }
-        case Terminal.Char.r() => {
-          buffer.append(c)
-        }
-        case Terminal.OpenBrace.r() => {
-          tokens.enqueue(new Token(Tag.T_openBrace, ""))
-          println("OPEN BRACE MATCH")
-        }
-        case Terminal.CloseBrace.r() => {
-          tokens.enqueue(new Token(Tag.T_closeBrace, ""))
-        }
-        case Terminal.OpenParen.r() => {
-          tokens.enqueue(new Token(Tag.T_openParen, ""))
-          checkBuffer()
-        }
-        case Terminal.CloseParen.r() => {
-          tokens.enqueue(new Token(Tag.T_closeParen, ""))
-        }
-        case Terminal.Plus.r() => {
-          tokens.enqueue(new Token(Tag.T_plusOp, ""))
-          checkBuffer()
-        }
-        case Terminal.Equals.r() => {
-          // Look-ahead to determine if this is the assignment operator or 
-          // the boolean equality operator.
-          if (s.head == '=') {
-            tokens.enqueue(new Token(Tag.T_boolOp, "=="))
-            s.next
-          } else {
-            tokens.enqueue(new Token(Tag.T_assignOp, ""))
-          }
-          checkBuffer()
-        }
-        case Terminal.Exclamation.r() => {
-          if (s.head == '=') {
-            tokens.enqueue(new Token(Tag.T_boolOp, "!="))
-            s.next
-          } else {
-            doError("Syntax error. Expecting equals sign to complete not operator.")
-          }
-          checkBuffer()
-        }
-        case Terminal.DoubleQuote.r() => {
-          // process string
-        }
-        case Terminal.Space.r() => {
-          checkBuffer()
-        }
-        case Terminal.Newline.r() => {
-          checkBuffer()
-          nLines += 1
-          nColumns = 0
-        }
-        case Terminal.EndOfProgram.r() => {
-          println("EndOfProgram: " + c)
-        }
-        case _ => {
-          doError("Syntax error. Input not recognized.")
-        }
+        // Determine which non-terminal we've hit.
+        identifyLexeme(c.toString)
       }
     }
+    
+    def identifyLexeme(terminal: String): Unit = {
 
-    def checkBuffer() {
-      if (!buffer.isEmpty) {
-        buffer.toString match {
-          case Terminal.If.r() =>
-            tokens.enqueue(new Token(Tag.T_if, ""))
-          case Terminal.While.r() =>
-            tokens.enqueue(new Token(Tag.T_while, ""))
-          case Terminal.Print.r() =>
-            tokens.enqueue(new Token(Tag.T_print, ""))
-          case Terminal.BoolLiteral.r() =>
-            tokens.enqueue(new Token(Tag.T_boolLiteral, buffer.toString))
-          case Terminal.Digit.r() =>
-            tokens.enqueue(new Token(Tag.T_numLiteral, buffer.toString))
-          case Terminal.Int.r() =>
-            tokens.enqueue(new Token(Tag.T_int, ""))
-          case Terminal.Boolean.r() =>
-            tokens.enqueue(new Token(Tag.T_boolean, ""))
-          case Terminal.String.r() =>
-            tokens.enqueue(new Token(Tag.T_string, ""))
-          case Terminal.Id.r() =>
-            tokens.enqueue(new Token(Tag.T_id, buffer.toString))
-          case _ =>
-            doError("Invalid character sequence.")
+      terminal match {
+        case Terminal.OpenBrace() => {
+            tokens.enqueue(new Token(Tag.T_openBrace, ""))
+            println("OPEN BRACE MATCH")
+          }
+        case Terminal.CloseBrace() => {
+            tokens.enqueue(new Token(Tag.T_closeBrace, ""))
+            println("CLOSE BRACE MATCH")
+          }
+        case Terminal.OpenParen() => {
+            tokens.enqueue(new Token(Tag.T_openParen, ""))
+            println("OPEN PAREN MATCH")
+          }
+        case Terminal.CloseParen() => {
+            tokens.enqueue(new Token(Tag.T_closeParen, ""))
+            println("CLOSE PAREN MATCH")
+          }
+        case Terminal.Plus() => {
+            tokens.enqueue(new Token(Tag.T_plusOp, ""))
+            println("PLUS SIGN MATCH")
+          }
+        case Terminal.Equals() => {
+            // Look-ahead to determine if this is the assignment operator or 
+            // the boolean equality operator.
+            if (tokenStream.head == '=') {
+              tokens.enqueue(new Token(Tag.T_boolOp, "=="))
+              tokenStream.next
+              nColumns += 1
+              println("EQUALITY SIGN MATCH")
+            } else {
+              tokens.enqueue(new Token(Tag.T_assignOp, ""))
+              println("ASSIGNMENT MATCH")
+            }
+          }
+        case Terminal.Exclamation() => {
+            if (tokenStream.head == '=') {
+              tokens.enqueue(new Token(Tag.T_boolOp, "!="))
+              tokenStream.next
+              nColumns += 1
+              println("NOT EQUALS MATCH")
+            } else {
+              doError("Syntax error. Expecting equals sign to complete not operator.")
+            }
+        }
+        case Terminal.DoubleQuote() => {
+            // process string
+            println("DOUBLE QUOTE MATCH")
+        }
+        case Terminal.Space() => {
+            println("SPACE FOUND MATCH")
+        }
+        case Terminal.Newline() => {
+            nLines += 1
+            nColumns = 1
+            println("NEWLINE MATCH")
+        }
+        case Terminal.EndOfProgram() => {
+            println("END OF PROGRAM MATCH")
+        }
+        case Terminal.If() =>
+          tokens.enqueue(new Token(Tag.T_if, ""))
+        case Terminal.While() =>
+          tokens.enqueue(new Token(Tag.T_while, ""))
+        case Terminal.Print() =>
+          tokens.enqueue(new Token(Tag.T_print, ""))
+        case Terminal.BoolLiteral() =>
+          tokens.enqueue(new Token(Tag.T_boolLiteral, buffer.toString))
+        case Terminal.Digit() =>
+          tokens.enqueue(new Token(Tag.T_numLiteral, buffer.toString))
+        case Terminal.Int() =>
+          tokens.enqueue(new Token(Tag.T_int, ""))
+        case Terminal.Boolean() =>
+          tokens.enqueue(new Token(Tag.T_boolean, ""))
+        case Terminal.String() =>
+          tokens.enqueue(new Token(Tag.T_string, ""))
+        case Terminal.Id() =>
+          tokens.enqueue(new Token(Tag.T_id, buffer.toString))
+        case _ => {
+            doError("Syntax error. Invalid character sequence." + terminal)
         }
       }
-      // Empty the buffer.
-      buffer.clear
     }
 
     def doWarn(msg: String) {
@@ -173,12 +192,6 @@ object Lex {
     def doError(msg: String) {
       println("ERROR: " + msg + "\nLINE: " + nLines + "\nCOLUMN: " + nColumns)
       fail = true
-    }
-
-    // Loop until there are no more characters.
-    while (s.hasNext && !fail) {
-      consume(s.next)
-      nColumns += 1
     }
   }
 
