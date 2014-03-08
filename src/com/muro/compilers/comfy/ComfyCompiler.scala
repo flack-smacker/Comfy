@@ -6,6 +6,8 @@
 
 package com.muro.compilers.comfy
 
+import scala.io.Source
+
 object ComfyCompiler {
 
   /**
@@ -14,8 +16,10 @@ object ComfyCompiler {
   def main(args: Array[String]): Unit = {
     if (args.length < 1)
       println("Please provide a filename.")
-    else
+    else {
       Lex.tokenize(args(0))
+      Lex.tokens.foreach(println)
+    }
   }
 
 }

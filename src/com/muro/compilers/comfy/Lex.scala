@@ -18,6 +18,10 @@ object Lex {
    */
   val tokens = new scala.collection.mutable.Queue[Token]
 
+  /**
+   * This method is the workhorse that performs most of the tasks required for
+   * lexing an input file.
+   */
   def tokenize(f: String): Unit = {
 
     /**
@@ -109,6 +113,7 @@ object Lex {
      * except for Strings, which are handled differently.
      */
     def consume(c: Char): Unit = {
+      // Buffer all alpha-numeric characters.
       if (c.isLetterOrDigit) {
         buffer.append(c)
       } else {
@@ -123,32 +128,31 @@ object Lex {
       }
     }
 
+    /**
+     * This method determines if the specified String matches a lexeme pattern.
+     * If so, it performs the appropriate action.
+     */
     def identifyLexeme(terminal: String): Unit = {
 
       terminal match {
         case Terminal.OpenBrace() => {
           tokens.enqueue(new Token(Tag.T_openBrace, ""))
           braces.push("{")
-          println("OPEN BRACE MATCH")
         }
         case Terminal.CloseBrace() => {
           tokens.enqueue(new Token(Tag.T_closeBrace, ""))
           braces.pop()
-          println("CLOSE BRACE MATCH")
         }
         case Terminal.OpenParen() => {
           tokens.enqueue(new Token(Tag.T_openParen, ""))
           parens.push("(")
-          println("OPEN PAREN MATCH")
         }
         case Terminal.CloseParen() => {
           tokens.enqueue(new Token(Tag.T_closeParen, ""))
           parens.pop()
-          println("CLOSE PAREN MATCH")
         }
         case Terminal.Plus() => {
           tokens.enqueue(new Token(Tag.T_plusOp, ""))
-          println("PLUS SIGN MATCH")
         }
         case Terminal.Equals() => {
           // Look-ahead to determine if this is the assignment operator or 
@@ -157,36 +161,44 @@ object Lex {
             tokens.enqueue(new Token(Tag.T_boolOp, "=="))
             tokenStream.next
             nColumns += 1
-            println("EQUALITY SIGN MATCH")
           } else {
             tokens.enqueue(new Token(Tag.T_assignOp, ""))
-            println("ASSIGNMENT MATCH")
           }
         }
         case Terminal.Exclamation() => {
           if (tokenStream.head == '=') {
             tokens.enqueue(new Token(Tag.T_boolOp, "!="))
             tokenStream.next
-            nColumns += 1
-            println("NOT EQUALS MATCH")
+            nColumns += 1;
           } else {
             doError("Syntax error. Expecting equals sign to complete not equals operator.")
           }
         }
         case Terminal.DoubleQuote() => {
-          // process string
-          println("DOUBLE QUOTE MATCH")
+          val charList: StringBuilder = new StringBuilder("")
+          // Eat all alphanumeric and space characters contained in the string.
+          while (tokenStream.head.isLetterOrDigit || 
+                 tokenStream.head.isSpaceChar) {
+            charList.append(tokenStream.next)
+          }
+          // Check that the string ends with a double-quote.
+          if (tokenStream.head != '"') {
+            doWarn("Syntax error. Missing double-quote while parsing a charlist.")
+          } else {
+            // Discard the rightmost double-quote.
+            tokenStream.next
+            tokens.enqueue(new Token(Tag.T_string, charList.toString))
+          }
         }
         case Terminal.Space() => {
-          println("SPACE FOUND MATCH")
+          // do nothing right now
         }
         case Terminal.Newline() => {
           nLines += 1
           nColumns = 1
-          println("NEWLINE MATCH")
         }
         case Terminal.EndOfProgram() => {
-          println("END OF PROGRAM MATCH")
+          tokens.enqueue(new Token(Tag.T_endOfProgram, ""))
         }
         case Terminal.If() => {
           tokens.enqueue(new Token(Tag.T_if, ""))
@@ -244,5 +256,6 @@ object Lex {
 
   def main(args: Array[String]): Unit = {
     tokenize(args(0))
+    tokens.foreach { token => println(token.tag) }
   }
 }

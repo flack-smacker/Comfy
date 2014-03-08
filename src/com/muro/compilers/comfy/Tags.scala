@@ -20,7 +20,7 @@ object Tag extends Enumeration {
    */
   val T_if, T_while, T_print, T_boolOp, T_plusOp, T_assignOp, 
       T_openParen, T_closeParen, T_openBrace, T_closeBrace, 
-      T_dblQuote, T_int, T_boolean, T_string, 
+      T_dblQuote, T_int, T_boolean, T_string, T_endOfProgram,
       T_id, T_numLiteral, T_boolLiteral, T_stringLiteral 
   = Value
 }
