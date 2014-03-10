@@ -216,13 +216,13 @@ object Lex {
           tokens.enqueue(new Token(Tag.T_numLiteral, buffer.toString))
         }
         case Terminal.Int() => {
-          tokens.enqueue(new Token(Tag.T_int, ""))
+          tokens.enqueue(new Token(Tag.T_type, "int"))
         }
         case Terminal.Boolean() => {
-          tokens.enqueue(new Token(Tag.T_boolean, ""))
+          tokens.enqueue(new Token(Tag.T_type, "boolean"))
         }
         case Terminal.String() => {
-          tokens.enqueue(new Token(Tag.T_string, ""))
+          tokens.enqueue(new Token(Tag.T_type, "string"))
         }
         case Terminal.Id() => {
           tokens.enqueue(new Token(Tag.T_id, buffer.toString))
