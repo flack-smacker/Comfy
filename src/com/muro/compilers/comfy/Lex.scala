@@ -187,7 +187,7 @@ object Lex {
           } else {
             // Discard the rightmost double-quote.
             tokenStream.next
-            tokens.enqueue(new Token(Tag.T_string, charList.toString))
+            tokens.enqueue(new Token(Tag.T_stringLiteral, charList.toString))
           }
         }
         case Terminal.Space() => {

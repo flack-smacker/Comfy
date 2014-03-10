@@ -14,6 +14,6 @@ class Tree[T](val r:Node[T]) {
   val root = r
   
   def addChild(c: Node[T]) {
-    c.children.
+    
   }
 }
