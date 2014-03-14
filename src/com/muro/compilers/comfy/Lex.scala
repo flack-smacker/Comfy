@@ -256,6 +256,6 @@ object Lex {
 
   def main(args: Array[String]): Unit = {
     tokenize(args(0))
-    tokens.foreach { token => println(token.tag) }
+    tokens.foreach { token => println(token.tag + " " + token.attr) }
   }
 }

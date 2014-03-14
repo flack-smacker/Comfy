@@ -20,8 +20,13 @@ object ComfyCompiler {
   }
   
   def compile(filename :String) = {
+    
+    println("Initiating lexical analysis on file \"" + filename + "\".")
+    
     Lex.tokenize(filename)
-    Lex.tokens.foreach( e => println(e.tag))
+    Lex.tokens.foreach( e => println("Found token " + e.tag + ":" + e.attr))
+    
+    println("Lexical analysis complete. Beginning parse...")
     Parse.parse(Lex.tokens)
   }
 }

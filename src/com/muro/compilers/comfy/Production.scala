@@ -6,9 +6,14 @@
 
 package com.muro.compilers.comfy
 
+/**
+ * Defines the productions that appear in our grammar.
+ */
 object Production extends Enumeration {
-   // Declares the valid productions defined in our grammar.
-   val Program, Block, StatementList, 
+        
+       type Tag = Value
+       
+       val Program, Block, StatementList, 
        Statement, PrintStatement, AssignmentStatement,
        WhileStatement, IfStatement, VarDecl,
        Expr, IntExpr, StringExpr, BooleanExpr,
