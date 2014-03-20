@@ -31,12 +31,12 @@ object Parse {
 
       println("Parsing program...")
       
-      var head = parseTree.insert(new Node("Program"))
+      var head = parseTree.insert(new Node(Production.Program))
       
       block()
 
       if (isCurrentTokenValid(Tag.T_endOfProgram))
-        head.children.append(new Node("EndOfProgram"))
+        head.children.append(new Node(Terminal.EndOfProgram))
       else
         println("ERROR: A program should end with the end-of-program marker.")
     }
@@ -52,17 +52,17 @@ object Parse {
       println("Parsing block...")
       
       // As a result of this call, Block is the current node.
-      var head = parseTree.insert(new Node("Block"))
+      var head = parseTree.insert(new Node(Production.Block))
       
       if (isCurrentTokenValid(Tag.T_openBrace))
-        head.children.append(new Node("{"))
+        head.children.append(new Node(Terminal.OpenBrace))
       else
         println("ERROR: A block should begin with an opening brace.")
 
       statementList()
 
       if (isCurrentTokenValid(Tag.T_closeBrace))
-        head.children.append(new Node("}"))
+        head.children.append(new Node(Terminal.CloseBrace))
       else
         println("ERROR: A block should end with an closing brace.")
     }
@@ -78,7 +78,7 @@ object Parse {
       println("Parsing statement list...")
             
       // Insert the StatementList node into the parse tree...
-      var head = parseTree.insert(new Node("StatementList"))
+      var head = parseTree.insert(new Node(Production.StatementList))
       
       // Parse the list until a closing brace is encountered.
       while (currentToken.tag != Tag.T_closeBrace) {
@@ -101,7 +101,7 @@ object Parse {
 
       println("Parsing statement...")
       
-      var head = parseTree.insert(new Node("Statement"))
+      var head = parseTree.insert(new Node(Production.Statement))
       
       if (currentToken.tag == Tag.T_print)
         printStatement()
@@ -128,22 +128,22 @@ object Parse {
 
       println("Parsing print statement...")
       
-      var head = parseTree.insert(new Node("PrintStatement"))
+      var head = parseTree.insert(new Node(Production.PrintStatement))
       
       if (isCurrentTokenValid(Tag.T_print))
-        head.children.append(new Node("print"))
+        head.children.append(new Node(Terminal.Print))
       else
         println("ERROR: A print statement should begin with the print keyword.")
 
       if (isCurrentTokenValid(Tag.T_openParen))
-        head.children.append(new Node("("))
+        head.children.append(new Node(Terminal.OpenParen))
       else
         println("ERROR: The print keyword should be followed by an opening parenthesis.")
 
       expression()
 
       if (isCurrentTokenValid(Tag.T_closeParen))
-        head.children.append(new Node(")"))
+        head.children.append(new Node(Terminal.CloseParen))
       else
         println("ERROR: The print keyword should be followed by a closing parenthesis.")
     }
@@ -156,17 +156,17 @@ object Parse {
     def assignmentStatement() = {
 
       println("Parsing assignment statement...")
-      var head = parseTree.insert(new Node("AssignmentStatement"))
+      var head = parseTree.insert(new Node(Production.AssignmentStatement))
       
       // Check for an Id
       if (isCurrentTokenValid(Tag.T_id))
-        head.children.append(new Node("Id"))
+        head.children.append(new Node(Production.Id, currentToken.attr))
       else
         println("ERROR: Expecting an ID for an assignment statement.")
 
       // Check for an equals sign.
       if (isCurrentTokenValid(Tag.T_assignOp))
-        head.children.append(new Node("AssignmentOp"))
+        head.children.append(new Node(Terminal.AssignmentOp))
       else
         println("ERROR: Expecting an assignment operator.")
 
@@ -182,15 +182,15 @@ object Parse {
     def varDecl() = {
 
       println("Parsing variable declaration statement...")
-      var head = parseTree.insert(new Node("VarDecl"))
+      var head = parseTree.insert(new Node(Production.VarDecl))
       
       if (isCurrentTokenValid(Tag.T_type))
-        head.children.append(new Node("Type: " + currentToken.attr))
+        head.children.append(new Node(Production.Type, currentToken.attr))
       else
         println("ERROR: Expecting a valid type keyword.")
 
       if (isCurrentTokenValid(Tag.T_id))
-        head.children.append(new Node("Id: " + currentToken.attr))
+        head.children.append(new Node(Production.Id, currentToken.attr))
       else
         println("ERROR: Expecting an identifier.")
     }
@@ -203,11 +203,11 @@ object Parse {
     def whileStatement() = {
 
       println("Parsing while statement...")
-      var head = parseTree.insert(new Node("WhileStatement"))
+      var head = parseTree.insert(new Node(Production.WhileStatement))
       
       // A while statement should begin with the while keyword.
       if (isCurrentTokenValid(Tag.T_while))
-        head.children.append(new Node("While"))
+        head.children.append(new Node(Terminal.While))
       else
         println("ERROR: Expecting \"while\" keyword.")
 
@@ -226,10 +226,10 @@ object Parse {
     def ifStatement() = {
 
       println("Parsing if statement...")
-      var head = parseTree.insert(new Node("IfStatement"))
+      var head = parseTree.insert(new Node(Production.IfStatement))
       
       if (isCurrentTokenValid(Tag.T_if))
-        head.children.append(new Node("if"))
+        head.children.append(new Node(Terminal.If))
       else
         println("ERROR: Expecting \"if\" keyword.")
 
@@ -252,7 +252,7 @@ object Parse {
 
       println("Parsing expression...")
       
-      var head = parseTree.insert(new Node("Expression"))
+      var head = parseTree.insert(new Node(Production.Expr))
       
       if (currentToken.tag == Tag.T_numLiteral)
         intExpr()
@@ -263,7 +263,7 @@ object Parse {
         booleanExpr()
       else if (currentToken.tag == Tag.T_id) {
         println("Found identifier expression")
-        head.children.append(new Node("Id"))
+        head.children.append(new Node(Production.Id, currentToken.attr))
         currentToken = tokenStream.dequeue
       }
       else
@@ -279,17 +279,17 @@ object Parse {
 
       println("Parsing integer expression...")
       
-      var head = parseTree.insert(new Node("IntExpr"))
+      var head = parseTree.insert(new Node(Production.IntExpr))
       
       // An integer expression begins with...an integer.
       if (isCurrentTokenValid(Tag.T_numLiteral))
-        head.children.append(new Node("NumericLiteral: " + currentToken.attr))
+        head.children.append(new Node(Production.Digit, currentToken.attr))
       else
         println("ERROR: Expecting a numeric literal.")
 
       // Look-ahead to determine whether this is an addition expression.
       if (currentToken.tag == Tag.T_plusOp) {
-        head.children.append(new Node("PlusOp:+"))
+        head.children.append(new Node(Production.Intop, currentToken.attr))
         currentToken = tokenStream.dequeue
         expression()
       }
@@ -304,10 +304,10 @@ object Parse {
 
       println("Parsing string expression...")
       
-      var head = parseTree.insert(new Node("StringExpr"))
+      var head = parseTree.insert(new Node(Production.StringExpr))
       
       if (isCurrentTokenValid(Tag.T_stringLiteral))
-        head.children.append(new Node("StringLiteral: " + currentToken.attr))
+        head.children.append(new Node(Production.CharList, currentToken.attr))
       else
         println("ERROR: Expecting a string constant.")
     }
@@ -322,30 +322,30 @@ object Parse {
 
       println("Parsing boolean expression...")
       
-      var head = parseTree.insert(new Node("BooleanExpression"))
+      var head = parseTree.insert(new Node(Production.BooleanExpr))
       
       // Determine whether this is a bool literal...
       if (currentToken.tag == Tag.T_boolLiteral) {
-        head.children.append(new Node("BoolLiteral: " + currentToken.attr))
+        head.children.append(new Node(Production.Boolval, currentToken.attr))
         currentToken = tokenStream.dequeue
       } else { // ...or a boolean expression.
         
         if (isCurrentTokenValid(Tag.T_openParen))
-          head.children.append(new Node("("))
+          head.children.append(new Node(Terminal.OpenParen))
         else
           println("ERROR: A boolean expression begins with an open parenthesis.")
 
         expression()
 
         if (isCurrentTokenValid(Tag.T_boolOp))
-          head.children.append(new Node("BoolOp: " + currentToken.attr))
+          head.children.append(new Node(Production.Boolop, currentToken.attr))
         else
           println("ERROR: A boolean expression must contain a boolean operator.")
 
         expression()
 
         if (isCurrentTokenValid(Tag.T_closeParen))
-          head.children.append(new Node(")"))
+          head.children.append(new Node(Terminal.CloseParen))
         else
           println("ERROR: A boolean expression ends with a closing parenthesis.")
       }

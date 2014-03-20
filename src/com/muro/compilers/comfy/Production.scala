@@ -7,7 +7,7 @@
 package com.muro.compilers.comfy
 
 /**
- * Defines the productions that appear in our grammar.
+ * Defines the elements that appear in the parse tree.
  */
 object Production extends Enumeration {
         
@@ -18,5 +18,5 @@ object Production extends Enumeration {
        WhileStatement, IfStatement, VarDecl,
        Expr, IntExpr, StringExpr, BooleanExpr,
        Id, CharList, Type, Char, Space, Digit,
-       Boolop, Boolval, Intop = Value
+       Boolop, Boolval, Intop, Terminal = Value
 }

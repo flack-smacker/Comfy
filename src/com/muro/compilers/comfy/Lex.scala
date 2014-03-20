@@ -135,26 +135,26 @@ object Lex {
     def identifyLexeme(terminal: String): Unit = {
 
       terminal match {
-        case Terminal.OpenBrace() => {
+        case Pattern.OpenBrace() => {
           tokens.enqueue(new Token(Tag.T_openBrace, ""))
           braces.push("{")
         }
-        case Terminal.CloseBrace() => {
+        case Pattern.CloseBrace() => {
           tokens.enqueue(new Token(Tag.T_closeBrace, ""))
           braces.pop()
         }
-        case Terminal.OpenParen() => {
+        case Pattern.OpenParen() => {
           tokens.enqueue(new Token(Tag.T_openParen, ""))
           parens.push("(")
         }
-        case Terminal.CloseParen() => {
+        case Pattern.CloseParen() => {
           tokens.enqueue(new Token(Tag.T_closeParen, ""))
           parens.pop()
         }
-        case Terminal.Plus() => {
+        case Pattern.Plus() => {
           tokens.enqueue(new Token(Tag.T_plusOp, ""))
         }
-        case Terminal.Equals() => {
+        case Pattern.AssignmentOp() => {
           // Look-ahead to determine if this is the assignment operator or 
           // the boolean equality operator.
           if (tokenStream.head == '=') {
@@ -165,7 +165,7 @@ object Lex {
             tokens.enqueue(new Token(Tag.T_assignOp, ""))
           }
         }
-        case Terminal.Exclamation() => {
+        case Pattern.NotOperator() => {
           if (tokenStream.head == '=') {
             tokens.enqueue(new Token(Tag.T_boolOp, "!="))
             tokenStream.next
@@ -174,7 +174,7 @@ object Lex {
             doError("Syntax error. Expecting equals sign to complete not equals operator.")
           }
         }
-        case Terminal.DoubleQuote() => {
+        case Pattern.DoubleQuote() => {
           val charList: StringBuilder = new StringBuilder("")
           // Eat all alphanumeric and space characters contained in the string.
           while (tokenStream.head.isLetterOrDigit || 
@@ -190,41 +190,41 @@ object Lex {
             tokens.enqueue(new Token(Tag.T_stringLiteral, charList.toString))
           }
         }
-        case Terminal.Space() => {
+        case Pattern.Space() => {
           // do nothing right now
         }
-        case Terminal.Newline() => {
+        case Pattern.Newline() => {
           nLines += 1
           nColumns = 1
         }
-        case Terminal.EndOfProgram() => {
+        case Pattern.EndOfProgram() => {
           tokens.enqueue(new Token(Tag.T_endOfProgram, ""))
         }
-        case Terminal.If() => {
+        case Pattern.If() => {
           tokens.enqueue(new Token(Tag.T_if, ""))
         }
-        case Terminal.While() => {
+        case Pattern.While() => {
           tokens.enqueue(new Token(Tag.T_while, ""))
         }
-        case Terminal.Print() => {
+        case Pattern.Print() => {
           tokens.enqueue(new Token(Tag.T_print, ""))
         }
-        case Terminal.BoolLiteral() => {
+        case Pattern.BoolLiteral() => {
           tokens.enqueue(new Token(Tag.T_boolLiteral, buffer.toString))
         }
-        case Terminal.Digit() => {
+        case Pattern.Digit() => {
           tokens.enqueue(new Token(Tag.T_numLiteral, buffer.toString))
         }
-        case Terminal.Int() => {
+        case Pattern.Int() => {
           tokens.enqueue(new Token(Tag.T_type, "int"))
         }
-        case Terminal.Boolean() => {
+        case Pattern.Boolean() => {
           tokens.enqueue(new Token(Tag.T_type, "boolean"))
         }
-        case Terminal.String() => {
+        case Pattern.String() => {
           tokens.enqueue(new Token(Tag.T_type, "string"))
         }
-        case Terminal.Id() => {
+        case Pattern.Id() => {
           tokens.enqueue(new Token(Tag.T_id, buffer.toString))
         }
         case _ => {

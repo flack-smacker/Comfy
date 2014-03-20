@@ -22,9 +22,7 @@ object Tag extends Enumeration {
   val T_if, T_while, T_print, T_boolOp, T_plusOp, T_assignOp, 
       T_openParen, T_closeParen, T_openBrace, T_closeBrace, 
       T_dblQuote, T_type, T_int, T_boolean, T_string, T_endOfProgram,
-      T_id, T_numLiteral, T_boolLiteral, T_stringLiteral,
-      T_Program, T_Block, T_StatementList, T_Statement, T_PrintStatement,
-      T_AssignmentStatement, T_VarDecl, T_WhileStatement, T_IfStatement, T_Expr
+      T_id, T_numLiteral, T_boolLiteral, T_stringLiteral
   = Value
   
   def getDescription(toDescribe: Tag.Value):String = {

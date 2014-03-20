@@ -46,10 +46,10 @@ class Tree() {
       // If there are no children (i.e., leaf nodes)...
       if (node.children.isEmpty) {
         // ... note the leaf node.
-        traversalResult.append("[" + node.name + "]\n")
+        traversalResult.append("[" + node.label + "]\n")
       } else {
         // There are children, so note these interior/branch nodes and ...
-        traversalResult.append("<" + node.name + "> \n")
+        traversalResult.append("<" + node.label + "> \n")
         // .. recursively expand them.
         for ( n <- node.children) {
           expand(n, depth + 1);
