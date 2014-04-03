@@ -22,7 +22,7 @@ object Pattern {
   val Boolean = "boolean".r
   val EqualsOp = "==".r
   val NotEqualsOp = "!=".r  
-  val BoolLiteral= "(false)|(true)".r
+  val BoolLiteral = "false|true".r
   val Plus = "\\+".r
   val Space = " ".r
   val Newline = "\n".r

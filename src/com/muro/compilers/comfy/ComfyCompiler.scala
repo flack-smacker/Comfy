@@ -6,6 +6,8 @@
 
 package com.muro.compilers.comfy
 
+import com.muro.tree.Tree
+
 object ComfyCompiler {
 
   /**
@@ -27,6 +29,9 @@ object ComfyCompiler {
     Lex.tokens.foreach( e => println("Found token " + e.tag + ":" + e.attr))
     
     println("Lexical analysis complete. Beginning parse...")
-    Parse.parse(Lex.tokens)
+    val cst:Tree = Parse.parse(Lex.tokens)
+    
+    // Print the tree
+    println(cst.toString)
   }
 }

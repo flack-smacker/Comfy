@@ -62,7 +62,7 @@ object Lex {
     var nLines = 1
 
     /**
-     * Tracks the column number for error reporting purposes.
+     * Tracks the column number for error reporting.
      */
     var nColumns = 1
 
@@ -176,11 +176,13 @@ object Lex {
         }
         case Pattern.DoubleQuote() => {
           val charList: StringBuilder = new StringBuilder("")
+          
           // Eat all alphanumeric and space characters contained in the string.
           while (tokenStream.head.isLetterOrDigit || 
                  tokenStream.head.isSpaceChar) {
             charList.append(tokenStream.next)
           }
+          
           // Check that the string ends with a double-quote.
           if (tokenStream.head != '"') {
             doWarn("Syntax error. Missing double-quote while parsing a charlist.")

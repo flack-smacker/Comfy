@@ -22,7 +22,6 @@ object Terminal {
   val Boolean = "boolean"
   val EqualsOp = "=="
   val NotEqualsOp = "!="  
-  val BoolLiteral = "BoolLiteral"
   val BoolTrue = "true"
   val BoolFalse = "false"
   val Plus = "+"

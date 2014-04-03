@@ -10,7 +10,7 @@ import com.muro.tree.Tree
  */
 object Parse {
 
-  def parse(tokenStream: scala.collection.mutable.Queue[Token]) = {
+  def parse(tokenStream: scala.collection.mutable.Queue[Token]):Tree = {
 
     /**
      * A reference to the token currently being parsed.
@@ -263,11 +263,13 @@ object Parse {
         booleanExpr()
       else if (currentToken.tag == Tag.T_id) {
         println("Found identifier expression")
-        head.children.append(new Node(Production.Id, currentToken.attr))
-        currentToken = tokenStream.dequeue
-      }
-      else
+        idExpr()
+      } else {
         println("ERROR: Expecting an expression.")
+      }
+      
+      // Move the current pointer up to the parent.
+      parseTree.current = parseTree.current.parent
     }
 
     /**
@@ -328,27 +330,42 @@ object Parse {
       if (currentToken.tag == Tag.T_boolLiteral) {
         head.children.append(new Node(Production.Boolval, currentToken.attr))
         currentToken = tokenStream.dequeue
-      } else { // ...or a boolean expression.
-        
+      } else {
+        // ...or a boolean expression.
         if (isCurrentTokenValid(Tag.T_openParen))
           head.children.append(new Node(Terminal.OpenParen))
         else
           println("ERROR: A boolean expression begins with an open parenthesis.")
-
+        
         expression()
-
+        
+        parseTree.current = parseTree.current.parent
+        
         if (isCurrentTokenValid(Tag.T_boolOp))
           head.children.append(new Node(Production.Boolop, currentToken.attr))
         else
           println("ERROR: A boolean expression must contain a boolean operator.")
-
+        
         expression()
-
+        
+        parseTree.current = parseTree.current.parent
+        
         if (isCurrentTokenValid(Tag.T_closeParen))
           head.children.append(new Node(Terminal.CloseParen))
         else
           println("ERROR: A boolean expression ends with a closing parenthesis.")
       }
+    }
+    
+    def idExpr() {
+      
+      println("Parsing identifier expression...")
+      
+      var head = parseTree.insert(new Node(Production.IdExpr))
+      
+      head.children.append(new Node(Production.Id, currentToken.attr))
+      
+      currentToken = tokenStream.dequeue
     }
 
     /**
@@ -373,6 +390,8 @@ object Parse {
     
     // Kick-off parse
     program()
-    println(parseTree.toString)
+    
+    // Return the resulting CST.
+    parseTree
   }
 }
