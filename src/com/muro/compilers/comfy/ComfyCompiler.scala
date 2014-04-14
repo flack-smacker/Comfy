@@ -1,7 +1,5 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * 
  */
 
 package com.muro.compilers.comfy
@@ -25,13 +23,29 @@ object ComfyCompiler {
     
     println("Initiating lexical analysis on file \"" + filename + "\".")
     
+    // = = = = = = = = = = = = = = =
+    // PHASE 1 - Lexical Analysis
+    // RESULT - Token Stream
+    // = = = = = = = = = = = = = = = 
     Lex.tokenize(filename)
+    
+    // Print the results
     Lex.tokens.foreach( e => println("Found token " + e.tag + ":" + e.attr))
-    
     println("Lexical analysis complete. Beginning parse...")
-    val cst:Tree = Parse.parse(Lex.tokens)
     
-    // Print the tree
+    // = = = = = = = = = = = = = = =
+    // PHASE 2 - Parse
+    // RESULT - Concrete Syntax Tree
+    // = = = = = = = = = = = = = = =
+    val cst:Tree = Parse.parse(Lex.tokens)
+    // Print the CST
     println(cst.toString)
+    
+    // = = = = = = = = = = = = = = =
+    // PHASE 3 - Semantic Analysis
+    // RESULT - Abstract Syntax Tree
+    // = = = = = = = = = = = = = = =
+
+      
   }
 }

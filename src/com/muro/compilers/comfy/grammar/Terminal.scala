@@ -1,5 +1,5 @@
 
-package com.muro.compilers.comfy
+package com.muro.compilers.comfy.grammar
 
 /**
  * The Terminal class contains named constants corresponding to each terminal

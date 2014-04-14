@@ -1,9 +1,9 @@
 
-package com.muro.compilers.comfy
+package com.muro.compilers.comfy.grammar
 
 /**
- * The Pattern class contains regular expressions describing each terminal
- * that appears in our grammar.
+ * The Pattern class contains regular expressions that can be used to match
+ * each terminal that appears in our grammar.
  */
 object Pattern {
   val OpenBrace = "\\{".r

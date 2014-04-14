@@ -1,15 +1,13 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * 
  */
 
-package com.muro.compilers.comfy
+package com.muro.compilers.comfy.grammar
 
 /**
  * The Tag enumeration defines the elements of our grammar. Tags are used
- * during lex to name each Token and during parse to name each node of the 
- * parse tree.
+ * during lexical analysis to name each Token, and during parse to name each 
+ * node of the parse tree.
  */
 object Tag extends Enumeration {
 
@@ -37,6 +35,7 @@ object Tag extends Enumeration {
         case Tag.T_closeParen => "close parenthesis"
         case Tag.T_openBrace => "open brace"
         case Tag.T_closeBrace => "close brace"
+        case Tag.T_dblQuote => "double quote"
         case Tag.T_id => "identifier"
         case Tag.T_type => "type declaration"
         case Tag.T_boolLiteral => "boolean literal"

@@ -28,7 +28,9 @@ class Tree() {
     toAdd
   }
   
-  // Return a string representation of the tree.
+  /**
+   * Returns a string representation of the tree.
+   */
   override def toString():String = {
     
     // Initialize the result string.
@@ -63,4 +65,5 @@ class Tree() {
     // Return the result.
     return traversalResult.toString;
   }
+  
 }

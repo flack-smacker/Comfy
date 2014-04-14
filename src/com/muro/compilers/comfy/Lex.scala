@@ -1,8 +1,13 @@
 
 package com.muro.compilers.comfy
 
+import com.muro.compilers.comfy.grammar.Tag._
+import com.muro.compilers.comfy.grammar._
+import com.muro.compilers.comfy.exceptions.InvalidSyntaxException
+
 import scala.collection.mutable.Stack
 import scala.io._
+
 import java.io._
 
 /**
@@ -52,11 +57,6 @@ object Lex {
     var tokenStream: BufferedIterator[Char] = null
 
     /**
-     * A flag to indicate an unrecoverable syntax error.
-     */
-    var fail: Boolean = false
-
-    /**
      * Tracks the line number for error reporting purposes.
      */
     var nLines = 1
@@ -74,7 +74,13 @@ object Lex {
 
     // Strip leading and trailing newlines.
     source = new StringBuilder(source.toString().trim())
-
+    
+    // Does the file contain any text?
+    if (source.isEmpty) {
+      throw new InvalidSyntaxException("No source code.")
+    }
+    
+    
     // Verify that the program begins with an opening brace.
     if (source.charAt(0) != '{') {
       source.insert(0, "{")
@@ -94,16 +100,13 @@ object Lex {
     tokenStream = source.iterator.buffered
 
     // Loop until there are no more characters.
-    while (tokenStream.hasNext && !fail) {
+    while (tokenStream.hasNext) {
       consume(tokenStream.next)
       nColumns += 1
     }
 
     if (!parens.isEmpty || !braces.isEmpty)
-      doError("Syntax error. Source code contains unmatched braces or " +
-        "parenthesis.\nPlease double check your code and make sure each " +
-        "opening parenthesis\nor brace has a matching closing parenthesis" +
-        " or brace.")
+      throw new InvalidSyntaxException("Unmatched brace or parenthesis found.")
 
     /**
      * Consumes a single character of the source input program. If c is an
@@ -129,68 +132,89 @@ object Lex {
     }
 
     /**
-     * This method determines if the specified String matches a lexeme pattern.
-     * If so, it performs the appropriate action.
+     * Determines if the specified String matches a lexeme pattern defined by
+     * our grammar. If so, the lexeme is extracted and added to our token queue.
      */
     def identifyLexeme(terminal: String): Unit = {
 
       terminal match {
         case Pattern.OpenBrace() => {
-          tokens.enqueue(new Token(Tag.T_openBrace, ""))
+          tokens.enqueue(new Token(T_openBrace, ""))
           braces.push("{")
         }
         case Pattern.CloseBrace() => {
-          tokens.enqueue(new Token(Tag.T_closeBrace, ""))
+          tokens.enqueue(new Token(T_closeBrace, ""))
           braces.pop()
         }
         case Pattern.OpenParen() => {
-          tokens.enqueue(new Token(Tag.T_openParen, ""))
+          tokens.enqueue(new Token(T_openParen, ""))
           parens.push("(")
         }
         case Pattern.CloseParen() => {
-          tokens.enqueue(new Token(Tag.T_closeParen, ""))
+          tokens.enqueue(new Token(T_closeParen, ""))
           parens.pop()
         }
         case Pattern.Plus() => {
-          tokens.enqueue(new Token(Tag.T_plusOp, ""))
+          tokens.enqueue(new Token(T_plusOp, "+"))
         }
         case Pattern.AssignmentOp() => {
           // Look-ahead to determine if this is the assignment operator or 
           // the boolean equality operator.
           if (tokenStream.head == '=') {
-            tokens.enqueue(new Token(Tag.T_boolOp, "=="))
+            tokens.enqueue(new Token(T_boolOp, "=="))
             tokenStream.next
             nColumns += 1
           } else {
-            tokens.enqueue(new Token(Tag.T_assignOp, ""))
+            tokens.enqueue(new Token(T_assignOp, ""))
           }
         }
         case Pattern.NotOperator() => {
           if (tokenStream.head == '=') {
-            tokens.enqueue(new Token(Tag.T_boolOp, "!="))
+            tokens.enqueue(new Token(T_boolOp, "!="))
             tokenStream.next
             nColumns += 1;
           } else {
-            doError("Syntax error. Expecting equals sign to complete not equals operator.")
+            throw new InvalidSyntaxException(
+              "Expecting equals sign to complete boolean not equals " +
+              "operator on line " + nLines)
           }
         }
         case Pattern.DoubleQuote() => {
+          
+          tokens.enqueue(new Token(T_dblQuote, ""))
+          
           val charList: StringBuilder = new StringBuilder("")
-          
-          // Eat all alphanumeric and space characters contained in the string.
-          while (tokenStream.head.isLetterOrDigit || 
-                 tokenStream.head.isSpaceChar) {
-            charList.append(tokenStream.next)
+            
+          // Process all characters contained within the double-quotes.
+          while (tokenStream.head != '"') {
+            // Alphanumeric and space characters are valid. 
+            if (tokenStream.head.isLetterOrDigit || 
+                tokenStream.head.isSpaceChar) {
+                  charList.append(tokenStream.next)
+            } else if (tokenStream.head.isControl) {
+              // We encountered a line termination character, which is bad...
+              // because our grammar does not allow multi-line Strings.
+              throw new InvalidSyntaxException("Line termination character " +
+                "found while processing String on line " + nLines + 
+                ". Multi-line Strings are not supported.")
+            } else {
+              throw new InvalidSyntaxException(
+                "Invalid String literal found on line " + nLines + ". Strings" +
+                " can only contain alphanumeric characters and spaces.")
+            }
           }
           
-          // Check that the string ends with a double-quote.
-          if (tokenStream.head != '"') {
-            doWarn("Syntax error. Missing double-quote while parsing a charlist.")
-          } else {
-            // Discard the rightmost double-quote.
-            tokenStream.next
-            tokens.enqueue(new Token(Tag.T_stringLiteral, charList.toString))
+          // Empty Strings are a no-no in our grammar.
+          if (charList.isEmpty) {
+            throw new InvalidSyntaxException("Empty String found on line " + 
+              nLines + ". Our grammar does not allow empty Strings.")
           }
+          
+          // Dispose of the closing double-quote.
+          tokenStream.next
+          tokens.enqueue(new Token(T_stringLiteral, charList.toString))
+          
+          tokens.enqueue(new Token(T_dblQuote, ""))
         }
         case Pattern.Space() => {
           // do nothing right now
@@ -200,62 +224,50 @@ object Lex {
           nColumns = 1
         }
         case Pattern.EndOfProgram() => {
-          tokens.enqueue(new Token(Tag.T_endOfProgram, ""))
+          tokens.enqueue(new Token(T_endOfProgram, ""))
         }
         case Pattern.If() => {
-          tokens.enqueue(new Token(Tag.T_if, ""))
+          tokens.enqueue(new Token(T_if, ""))
         }
         case Pattern.While() => {
-          tokens.enqueue(new Token(Tag.T_while, ""))
+          tokens.enqueue(new Token(T_while, ""))
         }
         case Pattern.Print() => {
-          tokens.enqueue(new Token(Tag.T_print, ""))
+          tokens.enqueue(new Token(T_print, ""))
         }
         case Pattern.BoolLiteral() => {
-          tokens.enqueue(new Token(Tag.T_boolLiteral, buffer.toString))
+          tokens.enqueue(new Token(T_boolLiteral, buffer.toString))
         }
         case Pattern.Digit() => {
-          tokens.enqueue(new Token(Tag.T_numLiteral, buffer.toString))
+          tokens.enqueue(new Token(T_numLiteral, buffer.toString))
         }
         case Pattern.Int() => {
-          tokens.enqueue(new Token(Tag.T_type, "int"))
+          tokens.enqueue(new Token(T_type, "int"))
         }
         case Pattern.Boolean() => {
-          tokens.enqueue(new Token(Tag.T_type, "boolean"))
+          tokens.enqueue(new Token(T_type, "boolean"))
         }
         case Pattern.String() => {
-          tokens.enqueue(new Token(Tag.T_type, "string"))
+          tokens.enqueue(new Token(T_type, "string"))
         }
         case Pattern.Id() => {
-          tokens.enqueue(new Token(Tag.T_id, buffer.toString))
+          tokens.enqueue(new Token(T_id, buffer.toString))
         }
         case _ => {
-          doError("Syntax error. Invalid character sequence." + terminal)
+          throw new InvalidSyntaxException(
+            "Unrecognized character sequence \"" + terminal + "\" found on line " + nLines)
         }
       }
     }
-
+    
+    /**
+     * Prints a warning message to the console.
+     */
     def doWarn(msg: String) {
       println("WARNING: " + msg + "\nLINE: " + nLines + " POSITION: " + nColumns)
     }
-
-    def doError(msg: String) {
-      println("ERROR: " + msg + "\nLINE: " + nLines + " POSITION: " + nColumns)
-      fail = true
-    }
   }
-
-  def nextToken(): Token = {
-    if (hasNextToken())
-      tokens.dequeue
-    else
-      null
-  }
-
-  def hasNextToken(): Boolean = {
-    !tokens.isEmpty
-  }
-
+  
   def main(args: Array[String]): Unit = {
     tokenize(args(0))
     tokens.foreach { token => println(token.tag + " " + token.attr) }
