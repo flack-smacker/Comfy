@@ -12,20 +12,27 @@ import com.muro.tree._
  */
 object Parse {
 
-  def parse(tokenStream: scala.collection.mutable.Queue[Token]): Tree = {
+  /**
+   * A symbol table for storing identifier type and scope information.
+   */
+  var symbols = SymbolTable
+
+  /**
+   * The concrete syntax tree resulting from parse.
+   */
+  var parseTree: Tree = new Tree()
+
+  /**
+   * The collection of nodes identified during parse for constructing the AST.
+   */
+  var astNodes = new scala.collection.mutable.Queue[Node]
+
+  def parse(tokenStream: scala.collection.mutable.Queue[Token]) {
 
     /**
      * A reference to the token currently being parsed.
      */
     var currentToken = tokenStream.dequeue()
-
-    /**
-     * The concrete syntax tree resulting from parse.
-     */
-    var parseTree: Tree = new Tree()
-    
-    
-    var astNodes = new scala.collection.mutable.Queue[Node]
 
     /**
      * Parses a program. This method kicks off the parse phase.
@@ -56,6 +63,11 @@ object Parse {
 
       println("Parsing block...")
 
+      // Create a new environment...
+      symbols.newEnv()
+      // Status Output
+      println("SYMBOL TABLE UPDATE: Initialized new block scope...")
+
       // As a result of this call, Block is the current node.
       var head = parseTree.insert(new Node(Production.Block))
 
@@ -70,8 +82,18 @@ object Parse {
         head.children.append(new Node(Terminal.CloseBrace))
       else
         throw new ParseException("A block should end with an closing brace.")
-      
+
+      // Save this node for the AST.
       astNodes.enqueue(new Node("Block"))
+      
+      // We've exited a block so check if we need to adjust the scope.
+      if (symbols.currentEnv != symbols.globalEnv)
+        symbols.exitCurrentEnv()
+      // Status Output
+      println("SYMBOL TABLE UPDATE: Exiting current block scope...")
+            
+      // Leave the tree the way we found it.
+      parseTree.current = parseTree.current.parent
     }
 
     /**
@@ -90,8 +112,10 @@ object Parse {
       // Parse the list until a closing brace is encountered.
       while (currentToken.tag != Tag.T_closeBrace) {
         statement()
-        parseTree.current = parseTree.current.parent
       }
+
+      // Leave the tree the way we found it.
+      parseTree.current = parseTree.current.parent
     }
 
     /**
@@ -106,10 +130,12 @@ object Parse {
      */
     def statement() = {
 
-      println("Parsing statement...")
-
+      // Update the parse tree
       parseTree.insert(new Node(Production.Statement))
-
+      // Status Output
+      println("Parsing statement...")
+      
+      // Examine the next-token to determine which parse procedure to call.
       if (currentToken.tag == Tag.T_print)
         printStatement()
       else if (currentToken.tag == Tag.T_id)
@@ -123,7 +149,9 @@ object Parse {
       else if (currentToken.tag == Tag.T_openBrace)
         block()
       else
-        throw new ParseException("Expecting a statement.");
+        println("WARNING: Empty Block");
+
+      parseTree.current = parseTree.current.parent
     }
 
     /**
@@ -133,10 +161,12 @@ object Parse {
      */
     def printStatement() = {
 
+      // Status output.
       println("Parsing print statement...")
-
+      // Update the tree.
       var head = parseTree.insert(new Node(Production.PrintStatement))
 
+      // Follow the grammar.
       if (isCurrentTokenValid(Tag.T_print))
         head.children.append(new Node(Terminal.Print))
       else
@@ -156,8 +186,11 @@ object Parse {
       else
         throw new ParseException(
           "A print statement should end with a closing parenthesis.")
-      
+
+      // Save this node for the AST.
       astNodes.enqueue(head)
+      // Leaev the tree the way we found it.
+      parseTree.current = parseTree.current.parent
     }
 
     /**
@@ -167,10 +200,19 @@ object Parse {
      */
     def assignmentStatement() = {
 
+      // Status output.
       println("Parsing assignment statement...")
+      // Update the tree.
       var head = parseTree.insert(new Node(Production.AssignmentStatement))
 
-      // Check for an Id
+      // We know that the current token is an identifier because this procedure
+      // is invoked from statement() when the next token is a T_id. Therefore,
+      // we can extract the identifier char so that we can update the symbol
+      // table entry after successfully parsing the assignment.
+      val id = currentToken.attr
+      
+      // We already know we have an identifier, but we invoke this procedure 
+      // anyway because it scope checks the identifier and builds the Id tree.
       idExpr()
 
       // Check for an equals sign.
@@ -181,8 +223,16 @@ object Parse {
 
       // Parse the right-hand side of the assignment.
       expression()
-      
+
+      // The assignment is valid (as far as scope) so update the symbol table.
+      symbols.lookup(id).isDef = true
+      // Status Output.
+      println("SYMBOL TABLE UPDATE: Marking identifier " + id + " as defined.")
+
+      // Save this node for construction of an AST.
       astNodes.enqueue(head)
+      // Leave the tree the way we found it.
+      parseTree.current = parseTree.current.parent
     }
 
     /**
@@ -192,27 +242,61 @@ object Parse {
      */
     def varDecl() = {
 
+      // Status Output
       println("Parsing variable declaration statement...")
+      // Update the tree
       parseTree.insert(new Node(Production.VarDecl))
 
+      // Follow the grammar...
       if (currentToken.tag == Tag.T_type)
         parseTree.insert(new Node(Production.Type))
       else
         throw new ParseException(
           "A variable declaration should begin with a valid type.")
 
-      // Add the type specifier to the tree
-      parseTree.insert(new Node(currentToken.attr))
-
+      // Extract the type specifier from the token.
+      val t: String = currentToken.attr
+      // Extract the line number from the token.
+      val n: Integer = currentToken.line
+      // Add the type specifier to the tree.
+      parseTree.insert(new Node(t))
       // Move the current pointer back up to the VarDecl node.
       parseTree.current = parseTree.current.parent.parent
 
       // Grab the next token for processing...
       currentToken = tokenStream.dequeue
 
-      idExpr()
+      // Follow the grammar...
+      if (currentToken.tag == Tag.T_id)
+        parseTree.insert(new Node(Production.Id))
+      else
+        throw new ParseException(
+          "An indentifier should begin with an identifier??")
+
+      // Extract the identifier from the token.
+      val id: String = currentToken.attr
+      // Check if this symbol has already been declared in the current scope.
+      if (symbols.currentEnv.isDeclaredImmediate(id))
+        throw new ParseException("Redeclaration found on line "  + n +
+          ". Identifier " +  id + " already declared on line " + 
+          symbols.lookup(id).line
+          )
+      else
+        symbols.addSymbol(id, new Entry(t, n))
+      // Status Output.
+      println("SYMBOL TABLE UPDATE: Adding identifier " + id + " with type " + t)
       
+      // Add the indentifier to the tree.
+      parseTree.insert(new Node(id))
+      // Move the the current node back up the tree two levels.
+      parseTree.current = parseTree.current.parent.parent
+      // Prepare the next token for processing...
+      currentToken = tokenStream.dequeue
+
+      // Save VarDecl nodes for the AST.
       astNodes.enqueue(parseTree.current)
+      // Leave the tree the way we found it.
+      parseTree.current = parseTree.current.parent
     }
 
     /**
@@ -222,10 +306,12 @@ object Parse {
      */
     def whileStatement() = {
 
+      // Status output.
       println("Parsing while statement...")
+      // Update the tree.
       var head = parseTree.insert(new Node(Production.WhileStatement))
 
-      // A while statement should begin with the while keyword.
+      // Follow the grammar.
       if (isCurrentTokenValid(Tag.T_while))
         head.children.append(new Node(Terminal.While))
       else
@@ -237,7 +323,10 @@ object Parse {
 
       // Parse the body of the while loop
       block()
-      
+
+      // Leave the tree the way we found it...
+      parseTree.current = parseTree.current.parent
+      // Save this node for construction of the AST.
       astNodes.enqueue(head)
     }
 
@@ -248,9 +337,12 @@ object Parse {
      */
     def ifStatement() = {
 
+      // Status output.
       println("Parsing if statement...")
+      // Update the tree...
       var head = parseTree.insert(new Node(Production.IfStatement))
 
+      // Follow the grammar...
       if (isCurrentTokenValid(Tag.T_if))
         head.children.append(new Node(Terminal.If))
       else
@@ -262,8 +354,11 @@ object Parse {
 
       // Parse the body of the if statement
       block()
-      
+
+      // Save this node for construction of the AST.
       astNodes.enqueue(head)
+      // Leave the tree the way we found it.
+      parseTree.current = parseTree.current.parent
     }
 
     /**
@@ -276,8 +371,9 @@ object Parse {
      */
     def expression(): Unit = {
 
+      // Status Output.
       println("Parsing expression...")
-
+      // Update the tree.
       var head = parseTree.insert(new Node(Production.Expr))
 
       if (currentToken.tag == Tag.T_numLiteral)
@@ -287,12 +383,10 @@ object Parse {
       else if (currentToken.tag == Tag.T_openParen ||
         currentToken.tag == Tag.T_boolLiteral)
         booleanExpr()
-      else if (currentToken.tag == Tag.T_id) {
-        println("Found identifier expression")
+      else if (currentToken.tag == Tag.T_id)
         idExpr()
-      } else {
+      else
         throw new ParseException("Expecting an expression.")
-      }
 
       // Move the current pointer up to the parent.
       parseTree.current = parseTree.current.parent
@@ -305,8 +399,9 @@ object Parse {
      */
     def intExpr() = {
 
+      // Status output.
       println("Parsing integer expression...")
-
+      // Update the tree.
       var head = parseTree.insert(new Node(Production.IntExpr))
 
       // An integer expression begins with...an integer.
@@ -334,8 +429,12 @@ object Parse {
         // Prepare the next token for processing...
         currentToken = tokenStream.dequeue
 
+        // Parse the right-hand side of the integer expression.
         expression()
       }
+
+      // Leave the tree the way we found it.
+      parseTree.current = parseTree.current.parent
     }
 
     /**
@@ -345,8 +444,9 @@ object Parse {
      */
     def stringExpr() = {
 
+      // Status output.
       println("Parsing string expression...")
-
+      // Update the tree.
       var head = parseTree.insert(new Node(Production.StringExpr))
 
       if (isCurrentTokenValid(Tag.T_dblQuote))
@@ -370,6 +470,9 @@ object Parse {
         head.children.append(new Node(Terminal.DoubleQuote))
       else
         throw new ParseException("A String should end with a double quote.")
+
+      // Leave the tree the way we found it.
+      parseTree.current = parseTree.current.parent
     }
 
     /**
@@ -380,8 +483,9 @@ object Parse {
      */
     def booleanExpr() = {
 
+      // Status output.
       println("Parsing boolean expression...")
-
+      // Update the tree.
       var head = parseTree.insert(new Node(Production.BooleanExpr))
 
       // Determine whether this is a bool literal...
@@ -403,9 +507,6 @@ object Parse {
             "ERROR: A boolean expression begins with an open parenthesis.")
 
         expression()
-        
-        // Move the current pointer up to the parent.
-        parseTree.current = parseTree.current.parent
 
         if (currentToken.tag == Tag.T_boolOp) {
           // Add the production...
@@ -422,22 +523,28 @@ object Parse {
         }
 
         expression()
-        // Move the current pointer up to the parent.
-        parseTree.current = parseTree.current.parent
-        
+
         if (isCurrentTokenValid(Tag.T_closeParen))
           head.children.append(new Node(Terminal.CloseParen))
         else
           throw new ParseException(
             "ERROR: A boolean expression ends with a closing parenthesis.")
-        
+
         // Move the current pointer back up to the Expr node.
         parseTree.current = parseTree.current.parent
       }
     }
 
+    /**
+     * Builds a node corresponding to an identifier using the global token
+     * stream. The node is structured as follows:
+     *        (Id)
+     *          |
+     *       (<char>)
+     */
     def idExpr() {
 
+      // Status Output
       println("Parsing identifier expression...")
 
       // Verify that the current token is in fact an identifier.
@@ -445,20 +552,33 @@ object Parse {
         parseTree.insert(new Node(Production.Id))
       else
         throw new ParseException(
-          "An indentifier should begin with an identifier.")
+          "An indentifier should begin with an identifier??")
 
-      // Add the character as a child node of the Id production...
-      parseTree.insert(new Node(currentToken.attr))
-
+      // Extract the identifier from the token.
+      val id: String = currentToken.attr
+      
+      // Has this identifier been declared?
+      if (!symbols.isDeclared(id))
+        throw new ParseException("Undeclared Identifier " + id + " found on " +
+          "line " + currentToken.line)
+      
+      // It has, so lookup its' symbol table entry.
+      var entry = symbols.lookup(id)
+      // Issue a warning if the variable has not been defined.
+      if (!entry.isDef)
+        println("WARNING: Identifier on line " + currentToken.line + 
+                "has not been defined. Using an undefined variable could" + 
+                "result in strange unpredictable (therefore exciting) behavior.")
+      // Increment the reference count.
+      entry.refCount += 1
+      
+      // Add the indentifier to the tree.
+      parseTree.insert(new Node(id))
       // Move the the current node back up the tree two levels.
       parseTree.current = parseTree.current.parent.parent
-
+      
       // Prepare the next token for processing...
       currentToken = tokenStream.dequeue
-    }
-
-    def typeDecl() {
-
     }
 
     /**
@@ -466,6 +586,7 @@ object Parse {
      */
     def isCurrentTokenValid(expected: grammar.Tag.Value): Boolean = {
 
+      // Status Output.
       println("Expecting " + Tag.getDescription(expected))
       println("Found " + Tag.getDescription(currentToken.tag))
 
@@ -483,12 +604,5 @@ object Parse {
 
     // Kick-off parse
     program()
-
-    while(!astNodes.isEmpty) {
-      println(astNodes.dequeue.label.toString)
-    }
-    
-    // Return the resulting CST.
-    parseTree
   }
 }

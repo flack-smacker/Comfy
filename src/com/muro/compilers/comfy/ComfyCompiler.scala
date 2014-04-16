@@ -21,31 +21,34 @@ object ComfyCompiler {
   
   def compile(filename :String) = {
     
-    println("Initiating lexical analysis on file \"" + filename + "\".")
-    
     // = = = = = = = = = = = = = = =
     // PHASE 1 - Lexical Analysis
     // RESULT - Token Stream
     // = = = = = = = = = = = = = = = 
+    println("Initiating lexical analysis on file \"" + filename + "\".")
     Lex.tokenize(filename)
-    
-    // Print the results
+    // Print the token stream.
     Lex.tokens.foreach( e => println("Found token " + e.tag + ":" + e.attr))
-    println("Lexical analysis complete. Beginning parse...")
+    println("Lexical analysis complete.")
     
     // = = = = = = = = = = = = = = =
-    // PHASE 2 - Parse
-    // RESULT - Concrete Syntax Tree
+    // PHASE 2 - Parse, Scope Check
+    // RESULT - Concrete Syntax Tree, Symbol Table
     // = = = = = = = = = = = = = = =
-    val cst:Tree = Parse.parse(Lex.tokens)
+    println("Parsing the resulting token stream.")
+    Parse.parse(Lex.tokens)
+    println("Parse complete.")
     // Print the CST
-    println(cst.toString)
+    println("Displaying the parse tree.")
+    println(Parse.parseTree)
+    // Print the symbol table
+    println("Displaying the symbol table.")
+    println(Parse.symbols)
     
     // = = = = = = = = = = = = = = =
-    // PHASE 3 - Semantic Analysis
+    // PHASE 3 - Semantic Analysis, Type-Checking
     // RESULT - Abstract Syntax Tree
     // = = = = = = = = = = = = = = =
-    //val ast: Tree = Analyzer.constructAST(cst)
-    //println(ast.toString)
+    
   }
 }
