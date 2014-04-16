@@ -45,7 +45,7 @@ object ComfyCompiler {
     // PHASE 3 - Semantic Analysis
     // RESULT - Abstract Syntax Tree
     // = = = = = = = = = = = = = = =
-
-      
+    //val ast: Tree = Analyzer.constructAST(cst)
+    //println(ast.toString)
   }
 }

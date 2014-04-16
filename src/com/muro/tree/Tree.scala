@@ -11,7 +11,8 @@ class Tree() {
   var current: Node = null
   
   /**
-   * Inserts the specified node into this tree.
+   * Inserts the specified node into this tree. The inserted node becomes
+   * the current node.
    */
   def insert(toAdd: Node):Node = {  
     if (root == null)

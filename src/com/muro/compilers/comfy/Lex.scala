@@ -139,38 +139,38 @@ object Lex {
 
       terminal match {
         case Pattern.OpenBrace() => {
-          tokens.enqueue(new Token(T_openBrace, ""))
+          tokens.enqueue(new Token(T_openBrace, nLines))
           braces.push("{")
         }
         case Pattern.CloseBrace() => {
-          tokens.enqueue(new Token(T_closeBrace, ""))
+          tokens.enqueue(new Token(T_closeBrace, nLines))
           braces.pop()
         }
         case Pattern.OpenParen() => {
-          tokens.enqueue(new Token(T_openParen, ""))
+          tokens.enqueue(new Token(T_openParen, nLines))
           parens.push("(")
         }
         case Pattern.CloseParen() => {
-          tokens.enqueue(new Token(T_closeParen, ""))
+          tokens.enqueue(new Token(T_closeParen, nLines))
           parens.pop()
         }
         case Pattern.Plus() => {
-          tokens.enqueue(new Token(T_plusOp, "+"))
+          tokens.enqueue(new Token(T_plusOp, nLines, "+"))
         }
         case Pattern.AssignmentOp() => {
           // Look-ahead to determine if this is the assignment operator or 
           // the boolean equality operator.
           if (tokenStream.head == '=') {
-            tokens.enqueue(new Token(T_boolOp, "=="))
+            tokens.enqueue(new Token(T_boolOp, nLines, "=="))
             tokenStream.next
             nColumns += 1
           } else {
-            tokens.enqueue(new Token(T_assignOp, ""))
+            tokens.enqueue(new Token(T_assignOp, nLines))
           }
         }
         case Pattern.NotOperator() => {
           if (tokenStream.head == '=') {
-            tokens.enqueue(new Token(T_boolOp, "!="))
+            tokens.enqueue(new Token(T_boolOp, nLines, "!="))
             tokenStream.next
             nColumns += 1;
           } else {
@@ -181,7 +181,7 @@ object Lex {
         }
         case Pattern.DoubleQuote() => {
           
-          tokens.enqueue(new Token(T_dblQuote, ""))
+          tokens.enqueue(new Token(T_dblQuote, nLines))
           
           val charList: StringBuilder = new StringBuilder("")
             
@@ -212,9 +212,9 @@ object Lex {
           
           // Dispose of the closing double-quote.
           tokenStream.next
-          tokens.enqueue(new Token(T_stringLiteral, charList.toString))
+          tokens.enqueue(new Token(T_stringLiteral, nLines, charList.toString))
           
-          tokens.enqueue(new Token(T_dblQuote, ""))
+          tokens.enqueue(new Token(T_dblQuote, nLines))
         }
         case Pattern.Space() => {
           // do nothing right now
@@ -224,34 +224,34 @@ object Lex {
           nColumns = 1
         }
         case Pattern.EndOfProgram() => {
-          tokens.enqueue(new Token(T_endOfProgram, ""))
+          tokens.enqueue(new Token(T_endOfProgram, nLines))
         }
         case Pattern.If() => {
-          tokens.enqueue(new Token(T_if, ""))
+          tokens.enqueue(new Token(T_if, nLines))
         }
         case Pattern.While() => {
-          tokens.enqueue(new Token(T_while, ""))
+          tokens.enqueue(new Token(T_while, nLines))
         }
         case Pattern.Print() => {
-          tokens.enqueue(new Token(T_print, ""))
+          tokens.enqueue(new Token(T_print, nLines))
         }
         case Pattern.BoolLiteral() => {
-          tokens.enqueue(new Token(T_boolLiteral, buffer.toString))
+          tokens.enqueue(new Token(T_boolLiteral, nLines, buffer.toString))
         }
         case Pattern.Digit() => {
-          tokens.enqueue(new Token(T_numLiteral, buffer.toString))
+          tokens.enqueue(new Token(T_numLiteral, nLines, buffer.toString))
         }
         case Pattern.Int() => {
-          tokens.enqueue(new Token(T_type, "int"))
+          tokens.enqueue(new Token(T_type, nLines, "int"))
         }
         case Pattern.Boolean() => {
-          tokens.enqueue(new Token(T_type, "boolean"))
+          tokens.enqueue(new Token(T_type, nLines, "boolean"))
         }
         case Pattern.String() => {
-          tokens.enqueue(new Token(T_type, "string"))
+          tokens.enqueue(new Token(T_type, nLines, "string"))
         }
         case Pattern.Id() => {
-          tokens.enqueue(new Token(T_id, buffer.toString))
+          tokens.enqueue(new Token(T_id, nLines, buffer.toString))
         }
         case _ => {
           throw new InvalidSyntaxException(

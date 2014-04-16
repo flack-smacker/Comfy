@@ -6,4 +6,4 @@
 
 package com.muro.compilers.comfy.exceptions
 
-class ParseException(msg: String) extends RuntimeException(msg)
+class InvalidExpression (msg: String) extends RuntimeException(msg)

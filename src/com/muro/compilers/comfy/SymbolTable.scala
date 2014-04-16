@@ -1,11 +1,14 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * 
  */
 
 package com.muro.compilers.comfy
 
 class SymbolTable(val envs: java.util.List[Env]) {
-
+  
+  var currentEnv = null;
+  
+  
 }
+
+class Entry(var idType: String, var isDefined: Boolean = false)

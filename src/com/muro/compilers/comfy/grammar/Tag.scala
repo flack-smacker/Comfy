@@ -6,8 +6,7 @@ package com.muro.compilers.comfy.grammar
 
 /**
  * The Tag enumeration defines the elements of our grammar. Tags are used
- * during lexical analysis to name each Token, and during parse to name each 
- * node of the parse tree.
+ * during lexical analysis to name each Token.
  */
 object Tag extends Enumeration {
 

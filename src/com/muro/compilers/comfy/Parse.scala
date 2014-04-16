@@ -23,6 +23,9 @@ object Parse {
      * The concrete syntax tree resulting from parse.
      */
     var parseTree: Tree = new Tree()
+    
+    
+    var astNodes = new scala.collection.mutable.Queue[Node]
 
     /**
      * Parses a program. This method kicks off the parse phase.
@@ -48,7 +51,6 @@ object Parse {
      * Parses a block.
      *
      * Block ::== { StatementList }
-     *
      */
     def block(): Unit = {
 
@@ -68,6 +70,8 @@ object Parse {
         head.children.append(new Node(Terminal.CloseBrace))
       else
         throw new ParseException("A block should end with an closing brace.")
+      
+      astNodes.enqueue(new Node("Block"))
     }
 
     /**
@@ -81,12 +85,12 @@ object Parse {
       println("Parsing statement list...")
 
       // Insert the StatementList node into the parse tree...
-      var head = parseTree.insert(new Node(Production.StatementList))
+      parseTree.insert(new Node(Production.StatementList))
 
       // Parse the list until a closing brace is encountered.
       while (currentToken.tag != Tag.T_closeBrace) {
         statement()
-        parseTree.current = head
+        parseTree.current = parseTree.current.parent
       }
     }
 
@@ -104,7 +108,7 @@ object Parse {
 
       println("Parsing statement...")
 
-      var head = parseTree.insert(new Node(Production.Statement))
+      parseTree.insert(new Node(Production.Statement))
 
       if (currentToken.tag == Tag.T_print)
         printStatement()
@@ -152,6 +156,8 @@ object Parse {
       else
         throw new ParseException(
           "A print statement should end with a closing parenthesis.")
+      
+      astNodes.enqueue(head)
     }
 
     /**
@@ -175,6 +181,8 @@ object Parse {
 
       // Parse the right-hand side of the assignment.
       expression()
+      
+      astNodes.enqueue(head)
     }
 
     /**
@@ -203,6 +211,8 @@ object Parse {
       currentToken = tokenStream.dequeue
 
       idExpr()
+      
+      astNodes.enqueue(parseTree.current)
     }
 
     /**
@@ -227,6 +237,8 @@ object Parse {
 
       // Parse the body of the while loop
       block()
+      
+      astNodes.enqueue(head)
     }
 
     /**
@@ -250,6 +262,8 @@ object Parse {
 
       // Parse the body of the if statement
       block()
+      
+      astNodes.enqueue(head)
     }
 
     /**
@@ -431,7 +445,7 @@ object Parse {
         parseTree.insert(new Node(Production.Id))
       else
         throw new ParseException(
-          "An assignment statement should begin with an identifier.")
+          "An indentifier should begin with an identifier.")
 
       // Add the character as a child node of the Id production...
       parseTree.insert(new Node(currentToken.attr))
@@ -470,6 +484,10 @@ object Parse {
     // Kick-off parse
     program()
 
+    while(!astNodes.isEmpty) {
+      println(astNodes.dequeue.label.toString)
+    }
+    
     // Return the resulting CST.
     parseTree
   }

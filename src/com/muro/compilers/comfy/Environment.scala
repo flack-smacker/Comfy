@@ -1,11 +1,14 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * 
  */
 
 package com.muro.compilers.comfy
 
 class Env {
-
+  private val mappings: java.util.Map[String, Entry] = 
+    new java.util.HashMap[String, Entry]()
+  
+    def isDefined(identifier: String): Boolean = {
+      true
+    }
 }

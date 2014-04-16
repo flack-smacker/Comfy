@@ -14,4 +14,4 @@ package com.muro.compilers.comfy.grammar
  * representing a boolean operation. The tag value would be "T_boolOp" and the 
  * attribute would be either "!=" or "==".
  */
-class Token(val tag: Tag.Value, val attr: String)
+class Token(val tag: Tag.Value, val line: Integer, val attr: String = "")
