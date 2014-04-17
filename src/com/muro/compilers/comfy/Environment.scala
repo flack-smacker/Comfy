@@ -1,5 +1,5 @@
 /*
- * 
+ * An Env is a mapping from symbols to symbol table entries. An environment can itself contain environments (nested scope).
  */
 
 package com.muro.compilers.comfy
