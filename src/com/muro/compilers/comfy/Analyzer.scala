@@ -1,5 +1,6 @@
-/*
- *
+/**
+ * Constructs an AST using a sequence of nodes generated during parse. Performs type-checking while constructing
+ * the AST.
  */
 
 package com.muro.compilers.comfy
@@ -295,17 +296,5 @@ object Analyzer {
    
     // Return the resulting AST
     ast
-  }
-  
-  /**
-   * Type checks the specified abstract syntax tree.
-   */
-  def typeCheck(ast: Tree) {
-    
-    
-    
-    def evaluateType(expr: Node): String = {
-      null
-    }
   }
 }
