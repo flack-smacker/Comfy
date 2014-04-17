@@ -1,5 +1,5 @@
 /*
- * Defines the type's provided by the Comfy Compiler.
+ * Defines the types provided by the Comfy Compiler.
  */
 
 package com.muro.compilers.comfy
