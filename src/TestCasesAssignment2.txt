@@ -1,0 +1,72 @@
+TITLE: Type error on integer expression.
+{
+  int a
+  a = 1 + "z"
+}$
+
+ERROR: Expecting an integer to complete integer expression on line.
+
+TITLE: Type error on assignment.
+
+{
+  int a
+  a = true
+}$
+
+ERROR: Cannot assign boolean value to int declared on line 2
+
+TITLE: Silly Conditional
+
+SOURCE:
+
+{
+  if (((3 + 5) != (9 + 3)) == (8 + 3) != true) {
+    print("success")
+  }
+}$
+
+AST:
+  <Block> 
+    <If> 
+      <!=> 
+        <!=> 
+          <+> 
+            [3]
+            <+> 
+              [5]
+              [7]
+          [5]
+        <!=> 
+          [true]
+          <==> 
+            [false]
+            [true]
+      <Block> 
+        <Print> 
+          [success]
+
+          
+PURPOSE: Variable Shadowing
+{
+  int a
+  {
+    boolean a
+  }
+  {
+    string a
+    {
+      int a
+    }
+  }
+}$
+
+===== Displaying the Symbol Table ========
+Nesting Level: 0
+ID:a TYPE:int DECLINE:2 ISDEFINED:false REFCOUNT:0 -> WARNING: Identifier declared but unused.
+Nesting Level: 1
+ID:a TYPE:boolean DECLINE:4 ISDEFINED:false REFCOUNT:0 -> WARNING: Identifier declared but unused.
+Nesting Level: 1
+ID:a TYPE:string DECLINE:7 ISDEFINED:false REFCOUNT:0 -> WARNING: Identifier declared but unused.
+Nesting Level: 2
+ID:a TYPE:int DECLINE:9 ISDEFINED:false REFCOUNT:0 -> WARNING: Identifier declared but unused.
+==========================================

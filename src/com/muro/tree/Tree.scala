@@ -30,6 +30,14 @@ class Tree() {
   }
   
   /**
+   * Inserts the specified node as a child of the current node. The reference
+   * to the current node is not updated.
+   */
+  def insertChild(toAdd: Node) {
+    current.children.append(toAdd)
+  }
+  
+  /**
    * Returns a string representation of the tree.
    */
   override def toString():String = {

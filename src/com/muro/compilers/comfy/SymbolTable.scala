@@ -31,6 +31,28 @@ object SymbolTable {
   def lookup(sym: String): Entry = {
      currentEnv.lookup(sym)
   }
+  
+  /**
+   * Deletes the current environment.
+   */
+  def delete() {
+    
+    // Maintain a reference to this environments enclosing environment.
+    val parent = currentEnv.parent
+    
+    // Check if the current environment is the top-level environment.
+    if (parent == null) {
+      currentEnv = null
+      globalEnv = null
+    } else {
+      // Get the index of the environment to be deleted.
+      val loc = parent.children.indexOf(currentEnv)
+      // Delete it.
+      parent.children.remove(loc)
+      // Make its parent the current environment.
+      currentEnv = parent
+    }
+  }
 
   /**
    * Creates a new empty environment enclosed by the current environment. This

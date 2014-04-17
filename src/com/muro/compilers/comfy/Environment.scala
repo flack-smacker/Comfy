@@ -177,6 +177,9 @@ class Env {
     for(sym <- getSymbols()) {
       toReturn.append("ID:" + sym + " " + lookup(sym) + "\n")
     }
+    
+    if(toReturn.isEmpty)
+      toReturn.append("EMPTY ENV\n")
     // Return the resulting String.
     toReturn.toString
   }

@@ -21,15 +21,22 @@ object ComfyCompiler {
   
   def compile(filename :String) = {
     
+  
+    try {    
     // = = = = = = = = = = = = = = =
     // PHASE 1 - Lexical Analysis
     // RESULT - Token Stream
     // = = = = = = = = = = = = = = = 
+    
     println("Initiating lexical analysis on file \"" + filename + "\".")
     Lex.tokenize(filename)
-    // Print the token stream.
-    Lex.tokens.foreach( e => println("Found token " + e.tag + ":" + e.attr))
     println("Lexical analysis complete.")
+    
+    // Print the token stream.
+    println("========== Displaying the Token Stream ============")
+    Lex.tokens.foreach( e => println("Found token " + e.tag + ":" + e.attr))
+    println("==========================================")
+    
     
     // = = = = = = = = = = = = = = =
     // PHASE 2 - Parse, Scope Check
@@ -38,17 +45,32 @@ object ComfyCompiler {
     println("Parsing the resulting token stream.")
     Parse.parse(Lex.tokens)
     println("Parse complete.")
+    
     // Print the CST
-    println("Displaying the parse tree.")
+    println("========== Displaying the CST ============")
     println(Parse.parseTree)
+    println("==========================================")
+    
     // Print the symbol table
-    println("Displaying the symbol table.")
+    println("===== Displaying the Symbol Table ========")
     println(Parse.symbols)
+    println("==========================================")
     
     // = = = = = = = = = = = = = = =
     // PHASE 3 - Semantic Analysis, Type-Checking
     // RESULT - Abstract Syntax Tree
     // = = = = = = = = = = = = = = =
     
+    println("Constructing the AST")
+    var ast: Tree = Analyzer.constructAST(Parse.astNodes)
+    println("Construction complete.")
+    
+    // Output the AST.
+    println("========== Displaying the AST ============")
+    println(ast)
+    println("==========================================")
+    } catch {
+      case e: Exception => println("ERROR: " + e.getMessage)
+    }
   }
 }

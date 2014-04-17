@@ -61,16 +61,19 @@ object Parse {
      */
     def block(): Unit = {
 
+      // Status Output.
       println("Parsing block...")
-
+      // As a result of this call, Block is the current node.
+      var head = parseTree.insert(new Node(Production.Block))
+      
       // Create a new environment...
       symbols.newEnv()
       // Status Output
       println("SYMBOL TABLE UPDATE: Initialized new block scope...")
-
-      // As a result of this call, Block is the current node.
-      var head = parseTree.insert(new Node(Production.Block))
-
+      
+      // Save this node for the AST.
+      astNodes.enqueue(new Node("Block"))
+      
       if (isCurrentTokenValid(Tag.T_openBrace))
         head.children.append(new Node(Terminal.OpenBrace))
       else
@@ -82,16 +85,16 @@ object Parse {
         head.children.append(new Node(Terminal.CloseBrace))
       else
         throw new ParseException("A block should end with an closing brace.")
-
-      // Save this node for the AST.
-      astNodes.enqueue(new Node("Block"))
       
       // We've exited a block so check if we need to adjust the scope.
       if (symbols.currentEnv != symbols.globalEnv)
         symbols.exitCurrentEnv()
       // Status Output
       println("SYMBOL TABLE UPDATE: Exiting current block scope...")
-            
+      
+      // Save this node for the AST.
+      astNodes.enqueue(new Node("EndBlock"))      
+      
       // Leave the tree the way we found it.
       parseTree.current = parseTree.current.parent
     }
@@ -149,7 +152,7 @@ object Parse {
       else if (currentToken.tag == Tag.T_openBrace)
         block()
       else
-        println("WARNING: Empty Block");
+        throw new ParseException("Invalid statement on line " + currentToken.line)
 
       parseTree.current = parseTree.current.parent
     }
@@ -219,7 +222,8 @@ object Parse {
       if (isCurrentTokenValid(Tag.T_assignOp))
         head.children.append(new Node(Terminal.AssignmentOp))
       else
-        throw new ParseException("Missing assignment operator.")
+        throw new ParseException("Missing assignment operator on line" +
+          currentToken.line)
 
       // Parse the right-hand side of the assignment.
       expression()
@@ -227,7 +231,7 @@ object Parse {
       // The assignment is valid (as far as scope) so update the symbol table.
       symbols.lookup(id).isDef = true
       // Status Output.
-      println("SYMBOL TABLE UPDATE: Marking identifier " + id + " as defined.")
+      println("SYMBOL TABLE UPDATE: Marking identifier '" + id + "' as defined.")
 
       // Save this node for construction of an AST.
       astNodes.enqueue(head)
@@ -284,7 +288,7 @@ object Parse {
       else
         symbols.addSymbol(id, new Entry(t, n))
       // Status Output.
-      println("SYMBOL TABLE UPDATE: Adding identifier " + id + " with type " + t)
+      println("SYMBOL TABLE UPDATE: Adding identifier '" + id + "' with type " + t)
       
       // Add the indentifier to the tree.
       parseTree.insert(new Node(id))
@@ -310,7 +314,9 @@ object Parse {
       println("Parsing while statement...")
       // Update the tree.
       var head = parseTree.insert(new Node(Production.WhileStatement))
-
+      // Save this node for construction of the AST.
+      astNodes.enqueue(head)
+      
       // Follow the grammar.
       if (isCurrentTokenValid(Tag.T_while))
         head.children.append(new Node(Terminal.While))
@@ -326,8 +332,6 @@ object Parse {
 
       // Leave the tree the way we found it...
       parseTree.current = parseTree.current.parent
-      // Save this node for construction of the AST.
-      astNodes.enqueue(head)
     }
 
     /**
@@ -341,7 +345,9 @@ object Parse {
       println("Parsing if statement...")
       // Update the tree...
       var head = parseTree.insert(new Node(Production.IfStatement))
-
+      // Save this node for construction of the AST.
+      astNodes.enqueue(head)
+      
       // Follow the grammar...
       if (isCurrentTokenValid(Tag.T_if))
         head.children.append(new Node(Terminal.If))
@@ -355,8 +361,6 @@ object Parse {
       // Parse the body of the if statement
       block()
 
-      // Save this node for construction of the AST.
-      astNodes.enqueue(head)
       // Leave the tree the way we found it.
       parseTree.current = parseTree.current.parent
     }
@@ -529,10 +533,10 @@ object Parse {
         else
           throw new ParseException(
             "ERROR: A boolean expression ends with a closing parenthesis.")
-
-        // Move the current pointer back up to the Expr node.
-        parseTree.current = parseTree.current.parent
       }
+      
+      // Move the current pointer back up to the Expr node.
+      parseTree.current = parseTree.current.parent
     }
 
     /**
@@ -564,11 +568,15 @@ object Parse {
       
       // It has, so lookup its' symbol table entry.
       var entry = symbols.lookup(id)
+      
       // Issue a warning if the variable has not been defined.
-      if (!entry.isDef)
-        println("WARNING: Identifier on line " + currentToken.line + 
-                "has not been defined. Using an undefined variable could" + 
-                "result in strange unpredictable (therefore exciting) behavior.")
+      // But look ahead in the token stream to determine if we are
+      // currently parsing an assignment statement. We don't want to issue
+      // the warning if we are in the process of assigning.
+      if (!entry.isDef && (tokenStream.head.tag != Tag.T_assignOp))
+        println("WARNING: Variable " + id + " on line " + currentToken.line + 
+                " has not been defined. Using an undefined variable could " + 
+                "result in unpredictable and possibly adventurous behavior.")
       // Increment the reference count.
       entry.refCount += 1
       
@@ -576,7 +584,6 @@ object Parse {
       parseTree.insert(new Node(id))
       // Move the the current node back up the tree two levels.
       parseTree.current = parseTree.current.parent.parent
-      
       // Prepare the next token for processing...
       currentToken = tokenStream.dequeue
     }
