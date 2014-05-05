@@ -508,7 +508,9 @@ object Parse {
           head.children.append(new Node(Terminal.OpenParen))
         else
           throw new ParseException(
-            "ERROR: A boolean expression begins with an open parenthesis.")
+            "Conditional expression did not evaluate to a boolean value.\nExpecting " +
+            "a boolean literal (true|false) or a compound boolean expression delimited" +
+            " by parenthesis.")
 
         expression()
 
@@ -575,10 +577,14 @@ object Parse {
       // the warning if we are in the process of assigning.
       if (!entry.isDef && (tokenStream.head.tag != Tag.T_assignOp))
         println("WARNING: Variable " + id + " on line " + currentToken.line + 
-                " has not been defined. Using an undefined variable could " + 
-                "result in unpredictable and possibly adventurous behavior.")
-      // Increment the reference count.
-      entry.refCount += 1
+                " has not been defined. Referencing an undefined variable could " + 
+                "result in unpredictable (but exciting) behavior.")
+      
+      if (entry.isDef) {
+        // The variable is declared and assigned, so
+        // ...increment the reference count.
+        entry.refCount += 1
+      }
       
       // Add the indentifier to the tree.
       parseTree.insert(new Node(id))

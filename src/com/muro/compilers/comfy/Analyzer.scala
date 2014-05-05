@@ -121,7 +121,7 @@ object Analyzer {
         // Extract the identifier's declared type from the symbol table.
         val declType = entry.idType
         
-        // Add the expression tree...
+        // Build the expression tree...
         val expType = expression(node.children(2).children(0))
         
         if (declType != expType)

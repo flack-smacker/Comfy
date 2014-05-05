@@ -83,9 +83,7 @@ object Lex {
     
     // Verify that the program begins with an opening brace.
     if (source.charAt(0) != '{') {
-      source.insert(0, "{")
-      doWarn("Missing opening brace. Inserting opening brace as a courtesy.\n" +
-        "In the future, please start your program with an opening brace.")
+      throw new InvalidSyntaxException("Program should begin with an opening brace.")
     }
 
     // Verify that the program contains the end-of-program marker.
@@ -202,12 +200,6 @@ object Lex {
                 "Invalid String literal found on line " + nLines + ". Strings" +
                 " can only contain alphanumeric characters and spaces.")
             }
-          }
-          
-          // Empty Strings are a no-no in our grammar.
-          if (charList.isEmpty) {
-            throw new InvalidSyntaxException("Empty String found on line " + 
-              nLines + ". Our grammar does not allow empty Strings.")
           }
           
           // Dispose of the closing double-quote.
