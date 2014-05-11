@@ -251,7 +251,7 @@ object Analyzer {
         
         def StringExpr(node: Node) {
           ast.current.children.append(
-            new Node(node.children(1).children(0).label))
+            new Node("\"" + node.children(1).children(0).label + "\""))
         }
         
         def BooleanExpr(node: Node) {
@@ -271,7 +271,7 @@ object Analyzer {
             
             if (expType1 != expType2)
               throw new TypeMismatchException(
-                "Cannot perform comparison of values of differing types.")
+                "Cannot compare values of differing types.")
               
             // Reset the current pointer.
             ast.current = ast.current.parent
@@ -295,17 +295,5 @@ object Analyzer {
    
     // Return the resulting AST
     ast
-  }
-  
-  /**
-   * Type checks the specified abstract syntax tree.
-   */
-  def typeCheck(ast: Tree) {
-    
-    
-    
-    def evaluateType(expr: Node): String = {
-      null
-    }
   }
 }

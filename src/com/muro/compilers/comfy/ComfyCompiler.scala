@@ -21,13 +21,11 @@ object ComfyCompiler {
   
   def compile(filename :String) = {
     
-  
     try {    
     // = = = = = = = = = = = = = = =
     // PHASE 1 - Lexical Analysis
     // RESULT - Token Stream
     // = = = = = = = = = = = = = = = 
-    
     println("Initiating lexical analysis on file \"" + filename + "\".")
     Lex.tokenize(filename)
     println("Lexical analysis complete.")
@@ -36,7 +34,6 @@ object ComfyCompiler {
     println("========== Displaying the Token Stream ============")
     Lex.tokens.foreach( e => println("Found token " + e.tag + ":" + e.attr))
     println("==========================================")
-    
     
     // = = = = = = = = = = = = = = =
     // PHASE 2 - Parse, Scope Check
@@ -60,7 +57,6 @@ object ComfyCompiler {
     // PHASE 3 - Semantic Analysis, Type-Checking
     // RESULT - Abstract Syntax Tree
     // = = = = = = = = = = = = = = =
-    
     println("Constructing the AST")
     var ast: Tree = Analyzer.constructAST(Parse.astNodes)
     println("Construction complete.")
@@ -69,6 +65,15 @@ object ComfyCompiler {
     println("========== Displaying the AST ============")
     println(ast)
     println("==========================================")
+    
+    // = = = = = = = = = = = = = = =
+    // PHASE 4 - Code Generation
+    // RESULT - 6502a Instructions
+    // = = = = = = = = = = = = = = =
+    val opcodes = CodeGenerator.generate(ast)
+    
+    println(opcodes)
+    
     } catch {
       case e: Exception => println("ERROR: " + e.getMessage)
     }

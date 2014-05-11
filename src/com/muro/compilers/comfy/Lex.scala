@@ -230,7 +230,7 @@ object Lex {
         case Pattern.BoolLiteral() => {
           tokens.enqueue(new Token(T_boolLiteral, nLines, buffer.toString))
         }
-        case Pattern.Digit() => {
+        case Pattern.IntLiteral() => {
           tokens.enqueue(new Token(T_numLiteral, nLines, buffer.toString))
         }
         case Pattern.Int() => {

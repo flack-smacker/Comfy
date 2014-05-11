@@ -185,8 +185,9 @@ class Env {
   }
 }
 
-class Entry(var idType: String, var line: Integer, 
-            var isDef: Boolean = false, var refCount: Integer = 0) {
+class Entry(var idType: String, var line: Integer = 0, 
+            var isDef: Boolean = false, var refCount: Integer = 0,
+            var tempName: String = "") {
   override def toString(): String = {
     var warn = ""
     // Issue a warning if this identifier was unused.

@@ -68,11 +68,11 @@ object SymbolTable {
     else
       currentEnv.addEnv(env)
     
-    // Initialize the new environments parent to the current environment.
+    // Connect the new environment to its parent.
     env.parent = currentEnv
     // Make the new environment the current environemnt
     currentEnv = env
-    // Return a reference to the new env
+    // Return a reference to the new environment
     env
   }
 

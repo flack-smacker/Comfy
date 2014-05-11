@@ -29,5 +29,6 @@ object Pattern {
   val Char = "[a-z]".r
   val Id = Char
   val Operator = "(==)|(!=)|\\+".r
-  val Digit = "[0-9]{1}".r
+  val IntLiteral = "\\d".r
+  val StringLiteral = "\"[a-z ]{0,}\"".r
 }
