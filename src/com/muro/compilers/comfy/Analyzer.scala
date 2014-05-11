@@ -1,5 +1,6 @@
-/*
- *
+/**
+ * Constructs an AST using a sequence of nodes generated during parse. Performs type-checking while constructing
+ * the AST.
  */
 
 package com.muro.compilers.comfy
