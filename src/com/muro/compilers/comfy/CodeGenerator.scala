@@ -14,7 +14,7 @@ object CodeGenerator {
   /**
    * The sequence of 6502a opcodes generated from the specified AST.
    */
-  private val opstream: StringBuilder = new StringBuilder()
+  private val opstream = new scala.collection.mutable.ArrayBuffer[String](256)
 
   /**
    * A mapping from temp names to static entries.
@@ -37,7 +37,16 @@ object CodeGenerator {
   /**
    * A location in the heap used for storing temporary values.
    */
-  val TEMP_HEAP_ADDRESS = "FF 00"
+  val TEMP_HEAP_ADDRESS = "FF"
+  
+  /**
+   * A constant to reprsent a byte value of 0 in HEX.
+   */
+  val ZERO_BYTE_HEX = "00"
+  
+  val BOOL_TRUE = "01"
+  
+  val BOOL_FALSE = "00"
 
   def generate(ast: Tree): String = {
 
@@ -47,20 +56,21 @@ object CodeGenerator {
     // Insert a break to end the program.
     opstream.append(Opcodes.BRK)
     
-    // Convert the opstream string into an array.
-    var ops = opstream.toString.split(" ")
-    
     // Calculate the size (in bytes) of the generated code.
-    val codeSizeBytes = ops.length
+    val codeSizeBytes = opstream.size
     
     // We now know where the static data area begins. So we backpatch.
-    backpatch(codeSizeBytes + 1, opstream.toString)
+    backpatch(codeSizeBytes + 1)
+    
+    // Convert the array into a string.
+    var bin = new StringBuilder(255)
+    
+    opstream.foreach { byte => bin.append(byte + " ") }
+    
+    bin.toString
   }
   
-  def backpatch(beginAddr: Int, img: String):String = {
-    
-    // This will store the executable image after backpatching. 
-    var toReturn = img
+  def backpatch(beginAddr: Int) {
     
     // An iterator will allow us to iterate over the dummy var entries.
     val iter = staticData.keySet.iterator
@@ -73,10 +83,11 @@ object CodeGenerator {
       var virtAddr = (staticData.get(tempName).offset + beginAddr).toHexString
       
       // Perform the replacement.
-      toReturn = toReturn.replaceAll(tempName, virtAddr)
+      for (i <- 0 to opstream.length - 1) {
+        if (opstream(i).equals(tempName))
+          opstream(i) = virtAddr
+      }
     }
-    
-    toReturn.replaceAllLiterally("XX", "00")
   }
 
   private def doGen(node: Node) {
@@ -148,10 +159,10 @@ object CodeGenerator {
 
     // Add the required machine instructions to the opstream.
     // Initialize the accumulator to 0.
-    opstream.append(Opcodes.LDA_C + " 00 ")
+    opstream.append(Opcodes.LDA_C, ZERO_BYTE_HEX)
     // Generate the store instruction, inserting the placeholder variable.
-    opstream.append(Opcodes.STA + " " + tempName + " XX ")
-
+    opstream.append(Opcodes.STA, tempName, ZERO_BYTE_HEX)
+    
     // Increment the count of static variables
     staticVarCount += 1
   }
@@ -160,18 +171,52 @@ object CodeGenerator {
     // Evaluate the expression on the right-hand side.
     expandExp(toExpand.children(1))
     // Load the value from the temporary memory location.
-    opstream.append(Opcodes.LDA_M + " " + TEMP_HEAP_ADDRESS + " ")
+    opstream.append(Opcodes.LDA_M, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
     
     // Extract the variable name from the node.
-    val varName: String = toExpand.children(0).label
+    val varName = toExpand.children(0).label
     // Lookup the dummy value for this variable.
-    val toAssign: String = SymbolTable.lookup(varName).tempName
+    val toAssign = SymbolTable.lookup(varName).tempName
     // Store the value in the location assigned to this variable.
-    opstream.append(Opcodes.STA + " " + toAssign + " XX ")
+    opstream.append(Opcodes.STA, toAssign, ZERO_BYTE_HEX)
   }
 
-  def expandIf(cond: Node) {
-
+  def expandIf(ifNode: Node) {
+    
+    // Evaluate the conditional expression
+    expandExp(ifNode.children(0))
+    
+    // Load the resulting value into the X register.
+    opstream.append(Opcodes.LDX_M, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
+    
+    // Load and store a true value into the heap.
+    opstream.append(Opcodes.LDA_C, BOOL_TRUE)
+    opstream.append(Opcodes.STA, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
+    
+    // Perform a comparison. If the Z flag is not set then we know that the
+    // boolean expression resulted in a false value.
+    opstream.append(Opcodes.CPX, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
+    
+    // Insert the branch opcode.
+    opstream.append(Opcodes.BNE)
+    
+    // This is the index where we will insert the number of bytes to jump.
+    val jmpIndex = opstream.size
+    
+    // Evaluate the conditional block.
+    expandBlock(ifNode.children(1))
+    
+    // Calculate the length of the block.
+    val blockLengthBytes = (opstream.size - jmpIndex)
+    
+    // Left pad the jump address with zeros.
+    var jmpAddr = blockLengthBytes.toHexString
+    
+    if (jmpAddr.length == 1)
+      jmpAddr = "0" + jmpAddr
+    
+    // Insert the jump amount.
+    opstream.insert(jmpIndex, jmpAddr)
   }
 
   def expandWhile(loop: Node) {
@@ -201,11 +246,11 @@ object CodeGenerator {
     // Generate the instructions necessary for evaluating the expression.
     expandExp(exprNode)
     // Load the Y register with the value to be printed.
-    opstream.append(Opcodes.LDY_M + " " + TEMP_HEAP_ADDRESS + " ")
+    opstream.append(Opcodes.LDY_M, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
     // Prime the X register for a print system call.
-    opstream.append(Opcodes.LDX_C + " 01 ")
+    opstream.append(Opcodes.LDX_C, "01")
     // Execute the print by issuing a system call.
-    opstream.append(Opcodes.SYS + " ")
+    opstream.append(Opcodes.SYS)
   }
 
   def expandExp(expr: Node) {
@@ -219,18 +264,19 @@ object CodeGenerator {
       case Pattern.BoolLiteral() => {
         // Load the literal into the accumulator.
         if (value.equals(BoolTrue))
-          opstream.append(Opcodes.LDA_C + " 01")
+          opstream.append(Opcodes.LDA_C, BOOL_TRUE)
         else if (value.equals(BoolFalse))
-          opstream.append(Opcodes.LDA_C + " 00")
+          opstream.append(Opcodes.LDA_C, BOOL_FALSE)
+        
         // Store it into the heap.
-        opstream.append(Opcodes.STA + " " + TEMP_HEAP_ADDRESS + " ")
+        opstream.append(Opcodes.STA, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
       }
 
       case Pattern.IntLiteral() => {
         // Load the literal into the accumulator
-        opstream.append(Opcodes.LDA_C + " 0" + value + " ")
+        opstream.append(Opcodes.LDA_C, "0" + value)
         // Store it into the heap.
-        opstream.append(Opcodes.STA + " " + TEMP_HEAP_ADDRESS + " ")
+        opstream.append(Opcodes.STA, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
       }
         
       case Pattern.StringLiteral() => {
@@ -241,9 +287,9 @@ object CodeGenerator {
           // Look-up the placeholder value for this identifier.
           val entry = SymbolTable.lookup(value)
           // Load the value of the variable into the accumulator.
-          opstream.append(Opcodes.LDA_M + " " + entry.tempName + " XX ")
+          opstream.append(Opcodes.LDA_M, entry.tempName, ZERO_BYTE_HEX)
           // Store it into the heap.
-          opstream.append(Opcodes.STA + " " + TEMP_HEAP_ADDRESS + " ")
+          opstream.append(Opcodes.STA, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
       }
         
       case "+" => {
@@ -255,29 +301,100 @@ object CodeGenerator {
         val intLit = expr.children(0).label
         
         // Store the integer literal in the accumulator.
-        opstream.append(Opcodes.LDA_C + " 0" + intLit + " ")
+        opstream.append(Opcodes.LDA_C, "0" + intLit)
         
         // Add the result of the right-hand side of the expression to the acc.
-        opstream.append(Opcodes.ADC + " " + TEMP_HEAP_ADDRESS + " ")
+        opstream.append(Opcodes.ADC, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
         
         // Store the result in the heap.
-        opstream.append(Opcodes.STA + " " + TEMP_HEAP_ADDRESS + " ")
+        opstream.append(Opcodes.STA, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
+      }
+      
+      case "==" => {
+        // Evaluate the left-hand side of the expression.
+        expandExp(expr.children(0))
+        
+        // Load the resulting value into the X register.
+        opstream.append(Opcodes.LDX_M, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
+        
+        // Evaluate the right-hand side of the expression. The resulting
+        // value is stored in the heap.
+        expandExp(expr.children(1))
+        
+        // Perform the comparison.
+        opstream.append(Opcodes.CPX, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
+        
+        /**
+         * We need to store the result of the comparsion in the heap. 
+         * This is accomplished through a series of branch and compare instructions.
+         * The first branch will skip twelve bytes to load a value of false 
+         * into the heap.         
+         */
+        opstream.append(Opcodes.BNE, "0C")
+          
+        // If the values were equal the branch is not executed and we load a 
+        // boolean true into the heap. 
+        opstream.append(Opcodes.LDA_C, BOOL_TRUE)
+        opstream.append(Opcodes.STA, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
+        
+        // If the above instructions are executed we need to skip the instructions 
+        // for loading a true vaule into the heap. If the comparison resulted in
+        // a false then we know that the heap address contains a boolean false.
+        // Therefore, we can force another branch by comparing the false to a true.
+        opstream.append(Opcodes.LDX_C, BOOL_FALSE)
+        opstream.append(Opcodes.CPX, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
+        opstream.append(Opcodes.BNE, "05")
+          
+        // If the values were not equal we branch here and load a boolean false
+        // value into the heap.
+        opstream.append(Opcodes.LDA_C, BOOL_FALSE)
+        opstream.append(Opcodes.STA, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
+      }
+      
+      case "!=" => {
+        // Evaluate the left-hand side of the expression.
+        expandExp(expr.children(0))
+        
+        // Load the result of the evaluation into the X register.
+        opstream.append(Opcodes.LDX_M, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
+        
+        // Evaluate the right-hand side of the expression. The resulting
+        // value is stored in the heap.
+        expandExp(expr.children(1))
+        
+        // Perform the comparison.
+        opstream.append(Opcodes.CPX, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)  
+        
+        /**
+         * Insert the branch instructions. This will determine whether we load
+         * a true value into the heap, or a false value. The process of loading
+         * either value requires 2 instructions which result in five bytes. The
+         * branch allows us to execute the instructions for loading either a
+         * true or false.
+         */
+        opstream.append(Opcodes.BNE, "0C")
+        
+        // We are checking for NOT EQUALS. Therefore, if the values were equal 
+        // the branch is not executed and a false value is stored in the heap.
+        opstream.append(Opcodes.LDA_C, BOOL_FALSE)
+        opstream.append(Opcodes.STA, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
+        
+        // If the above instructions are executed we need to skip the instructions 
+        // for loading a true vaule into the heap. If the comparison resulted in
+        // a false then we know that the heap address contains a boolean false.
+        // Therefore, we can force another branch by comparing the false to a true.
+        opstream.append(Opcodes.LDX_C, BOOL_TRUE)
+        opstream.append(Opcodes.CPX, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
+        opstream.append(Opcodes.BNE, "05")
+        
+        // If the values were not equal the branch is executed and we load a 
+        // boolean true into the heap.
+        opstream.append(Opcodes.LDA_C, BOOL_TRUE)
+        opstream.append(Opcodes.STA, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
       }
     }
   }
-
-  def expandIntExp(toExpand: Node) {
-
-  }
-
-  def expandBoolExp(toExpand: Node) {
-
-  }
-
-  def expandStringExp(toExpand: Node) {
-
-  }
-
+  
   class StaticEntry(var idName: String,
                     var idType: String,
                     var offset: Integer) {
