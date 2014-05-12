@@ -15,7 +15,12 @@ object CodeGenerator {
    * The sequence of 6502a opcodes generated from the specified AST.
    */
   private val opstream = new scala.collection.mutable.ArrayBuffer[String](256)
-
+  
+  /**
+   * A storage area for heap data.
+   */
+  private val heap = new scala.collection.mutable.ArrayBuffer[String](100)
+  
   /**
    * A mapping from temp names to static entries.
    */
@@ -28,7 +33,7 @@ object CodeGenerator {
    * temporary values and as the offset into the static data area.
    */
   private var staticVarCount: Integer = 0
-
+  
   /**
    * The prefix used when creating temporary variables in the static table.
    */
@@ -61,6 +66,9 @@ object CodeGenerator {
     
     // We now know where the static data area begins. So we backpatch.
     backpatch(codeSizeBytes + 1)
+    
+    // We can also calculate the start of the heap data area.
+    val heapStart = (codeSizeBytes + 1) + staticVarCount
     
     // Convert the array into a string.
     var bin = new StringBuilder(255)
@@ -151,13 +159,12 @@ object CodeGenerator {
     // Add the identifier to our symbol table.
     SymbolTable.addSymbol(toExpand.children(1).label,
       new com.muro.compilers.comfy.Entry(
-        toExpand.children(0).label,
-        0,
-        false,
-        0,
-        tempName))
+        toExpand.children(0).label, // type
+        0, // reference count
+        false, // is defined
+        0, // line number
+        tempName)) // dummy variable name
 
-    // Add the required machine instructions to the opstream.
     // Initialize the accumulator to 0.
     opstream.append(Opcodes.LDA_C, ZERO_BYTE_HEX)
     // Generate the store instruction, inserting the placeholder variable.
@@ -170,7 +177,7 @@ object CodeGenerator {
   def expandAssignment(toExpand: Node) {
     // Evaluate the expression on the right-hand side.
     expandExp(toExpand.children(1))
-    // Load the value from the temporary memory location.
+    // Load the resulting value from the temporary memory location.
     opstream.append(Opcodes.LDA_M, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
     
     // Extract the variable name from the node.
@@ -234,21 +241,25 @@ object CodeGenerator {
       return
     }
 
-    // Determine whether this is a string variable.
-    if (exprNode.label.matches(Pattern.Id.toString)) {
-      val varType = SymbolTable.lookup(exprNode.label).idType
-      if (varType.equals(ComfyType.String)) {
-        // Do some String related print stuff.
-        return
-      }
-    }
-
     // Generate the instructions necessary for evaluating the expression.
     expandExp(exprNode)
+    
     // Load the Y register with the value to be printed.
     opstream.append(Opcodes.LDY_M, TEMP_HEAP_ADDRESS, ZERO_BYTE_HEX)
-    // Prime the X register for a print system call.
-    opstream.append(Opcodes.LDX_C, "01")
+    
+    // Determine the type of value to be printed.
+    if (exprNode.label.matches(Pattern.Id.toString)) {
+      val varType = SymbolTable.lookup(exprNode.label).idType
+      // Prime the X register for a print system call.
+      if (varType.equals(ComfyType.String)) {
+        // Print a string.
+        opstream.append(Opcodes.LDX_C, "02")
+      } else {
+        // Print an integer.
+        opstream.append(Opcodes.LDX_C, "01")
+      }
+    }
+    
     // Execute the print by issuing a system call.
     opstream.append(Opcodes.SYS)
   }
@@ -280,7 +291,7 @@ object CodeGenerator {
       }
         
       case Pattern.StringLiteral() => {
-            // initialize heap with string literal
+        // initialize heap with string literal
       }
         
       case Pattern.Id() => {
