@@ -70,9 +70,12 @@ object ComfyCompiler {
     // PHASE 4 - Code Generation
     // RESULT - 6502a Instructions
     // = = = = = = = = = = = = = = =
+    println("Generating Code")
     val opcodes = CodeGenerator.generate(ast)
+    println("Code Generation Complete")
     
-    println(opcodes)
+    // Output the instruction stream.
+    println(opcodes.toString)
     
     } catch {
       case e: Exception => println("ERROR: " + e.getMessage)
